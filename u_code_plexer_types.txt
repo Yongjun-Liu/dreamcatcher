@@ -1,0 +1,60 @@
+	typ1	typ0	cond	TRAP	DMA	INT	mux2	mux1	mux0
+				
+offst	0	0	x	x	x	x	0	0	0	(adder)
+brch	0	1	x	x	x	x	0	0	0	(adder)
+
+pre	1	0	x	1	x	x	0	1	1	(trap u-code)
+pre	1	0	x	0	1	x	1	0	0	(dma u-code)
+pre	1	0	x	0	0	1	1	0	1	(interrupt u-code)
+pre	1	0	x	0	0	0	0	1	0	(fetch u-code)
+
+post	1	1	x	x	x	x	0	0	1	(IR)
+
+
+
+CORRECTED:
+mux0 = typ1( ~typ0( trap + ~trap~dmaInt ) + typ0 )
+mux1 = typ1~typ0(trap + ~trap~dma~int) == typ1~typ0(trap + ~(dma+int))
+mux2 = typ1~typ0~trap( Dma + ~DmaInt )
+
+
+simplified:
+
+MUX0 =	typ1( trap + ~DmaInt + typ0)
+MUX1 = 	typ1~typ0(trap + ~(dma+int))
+MUX2 =	typ1~typ0~trap( Dma + Int )
+
+
+types
+00	+offset		( +1 for sequential, and +offset for cond/uncond jumps )
+01	branch		( used for microcode branches, which are used to perform programmer's branches as well )
+10	pre		( pre-fetch, means next is the pre-fetch microcode )
+11	post		( means next u-address is given by  0xIR0000_0000, 
+				u-code length = 16 places(4bits), u-code index =  12bits ( up to 4096 places ) )
+
+8 to 1 mux values
+000	adder		( +1 or +offset )
+001	IR		
+010	fetch		( fetch handle )
+011	TRAP		( TRAP handle )
+100	DMA		( DMA handle )
+101	interrupts 	( INTERRUPT handle )
+
+
+
+
+
+
+
+
+NOTES:
+
+1. reset control bit connects to a monostable, so reset can let go once performed.
+
+2. interrupts or another trap cannot occur inside a trap's machine code!!
+
+3. ability to trap on any errors that can occur: invalid opcodes, division by zero, overheat, etc...
+
+4. each instruction is now 2 bytes long. possibility to fetch both bytes per instruction, or have some instructions be only one
+byte long. if allowing one byte long opcodes, then these 1 byte opcodes will not be able to use the branching instructions given
+by the higher byte. this is a waste of opcode space although executes faster. need to choose appropriate action.
