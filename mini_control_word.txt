@@ -1,0 +1,194 @@
+;; total of 112 control bits.
+;; about 26 of which are used inside the microcode board itself
+;; so a total of ~86 lines need to be sent out only
+
+
+typ0
+typ1
+COND_SRC_0 		; programmer's flag, microcode flags, or directly from ALU ?
+COND_SRC_1		; 00 = programmers, 01 = microcode, 10 = ALU
+cond_sel_0
+cond_sel_1
+cond_sel_2
+cond_invert
+
+OFFSET0			; jump offset. from -64 to 63
+OFFSET1
+OFFSET2
+OFFSET3
+OFFSET4
+OFFSET5
+OFFSET6
+
+TRAP_ACK
+INT_ACK
+U_ZF_IN_SRC
+U_CF_IN_SRC_0
+U_CF_IN_SRC_1
+U_SF_IN_SRC
+U_OF_IN_SRC
+ZF_IN_SRC_0
+
+ZF_IN_SRC_1
+CF_IN_SRC_0
+CF_IN_SRC_1
+SF_IN_SRC_0
+SF_IN_SRC_1
+OF_IN_SRC_0
+OF_IN_SRC_1
+OF_IN_SRC_2
+
+ALU_op0
+ALU_op1
+ALU_op2
+ALU_op3
+ALU_mode
+ALU_CF_IN_SRC0		; carry from microcode flags or programmer's flags?
+ALU_CF_IN_SRC1		; ZERO, 1, CF, ~CF ?
+ALU_CF_IN_SRC2		;
+
+ALU_CF_OUT_INV		; invert carry out ?
+ZBUS_IN_SRC		; from ALU or shift right machine ?
+SHR_MSB_SRC_0		; 000 = 0, 001 = U_CF, 010 = CF, 011 = ALU_7, 100 = ALU_0	
+SHR_MSB_SRC_1		; 
+SHR_MSB_SRC_2		; 	
+PC_IN_SRC
+MDRL_IN_src		; data bus or Z bus?
+MDRH_IN_src		; data bus or Z bus?
+
+a_L_wrt
+a_H_wrt
+b_L_wrt
+b_H_wrt
+c_L_wrt
+c_H_wrt
+d_L_wrt
+d_H_wrt
+
+CS_L_WRT
+CS_H_WRT
+DS_L_WRT
+DS_H_WRT
+SS_L_WRT
+SS_H_WRT
+ES_L_WRT
+ES_H_WRT
+
+SI_L_WRT
+SI_H_WRT
+DI_L_WRT
+DI_H_WRT
+spl_wrt
+sph_wrt
+bpl_wrt
+bph_wrt
+
+pcl_wrt
+pch_wrt
+IR_wrt
+INT_CODE_WRT
+MASK_FLAGS_WRT	
+AUX_FLAGS_WRT
+tdr_L_wrt
+tdr_H_wrt
+
+MAR_L_wrt
+MAR_H_wrt
+MDRL_L_WRT
+MDRL_H_WRT
+MDRH_L_wrt
+MDRH_H_wrt
+immy_0		; constant from microcode
+immy_1
+
+immy_2
+immy_3
+immy_4
+immy_5
+immy_6
+immy_7
+XBUS_LENGTH		; 0 = OPEN, 1 = CLOSED
+X_OUT_ENCOD_0
+
+X_OUT_ENCOD_1
+X_OUT_ENCOD_2
+X_OUT_ENCOD_3
+X_OUT_ENCOD_4
+X_OUT_ENCOD_5
+Y_OUT_ENCOD_0
+Y_OUT_ENCOD_1
+Y_OUT_ENCOD_2
+
+Y_OUT_ENCOD_3
+MDRL_L_DATA_OUT		; inverted
+MDRL_H_DATA_OUT		; inverted
+MDRH_L_DATA_OUT		; inverted
+MDRH_H_DATA_OUT		; inverted
+RD			- inverted
+WR			- inverted
+M_IO
+
+
+;; total 8 bits for outputs
+
+;; 6 bits
+
+immx_out		; zero value into X bus
+A_L_out
+A_H_OUT
+B_L_out
+B_H_OUT
+C_L_out
+C_H_OUT
+D_L_out
+D_H_OUT
+CS_L_X_OUT
+CS_H_X_OUT
+DS_L_X_OUT
+DS_H_X_OUT
+SS_L_X_OUT
+SS_H_X_OUT
+ES_L_X_OUT
+ES_H_X_OUT
+SI_L_X_OUT
+SI_H_X_OUT
+DI_L_X_OUT
+DI_H_X_OUT
+spl_out
+sph_out
+bpl_out
+bph_out
+pcl_out
+pch_out
+mar_L_X_out		
+mar_H_X_out
+tdr_L_X_out
+tdr_H_X_out
+MDRH_L_X_out
+MDRH_H_X_out
+MDRL_L_X_OUT
+MDRL_H_X_OUT
+FLAGS_REG_X_out		; flags register into X bus
+INT_STATUS_X_OUT
+INT_CODE_X_OUT
+AUX_FLAGS_X_OUT
+MASK_FLAGS_X_OUT
+
+
+;; 4 bits
+
+IMMY_OUT		; constant from microcode into Y bus
+TDR_L_Y_out
+TDR_H_Y_out
+MDRL_L_Y_OUT
+MDRL_H_Y_OUT
+MDRH_L_Y_OUT
+MDRH_H_Y_OUT
+
+
+
+
+
+
+
+

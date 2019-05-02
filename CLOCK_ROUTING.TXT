@@ -1,0 +1,7 @@
+CLOCK:
+
+the clock routing into all the CPU boards cannot be taken from the backplane!
+
+it has to be carefully routed to each board, and inside each board carefully sent
+to each IC, to avoid reflections.
+

@@ -1,0 +1,30 @@
+REP prefix
+
+we can create a REP prefix for some instructions that can repeat
+by using one of the 4 unused IR bits. remember IR is 16 bits wide,
+and we only use 12 of these bits for the actual opcode but
+we fetch all of the 16 bits as an opcode from the code.
+
+since these 4 bits are unused and left alone to cry,
+we can make them happy by using them for important purposes.
+the REP prefix is one of them.
+
+the REP prefix will repeat an instruction as many times as the
+count in C. so to implement this, we use one of the extra IR bits
+as a REP flag, to tell whether the instruction in question
+should repeat C times.
+
+if the flag is 1, we REP, if 0 we only execute once.
+
+we do this by using the condition evaluation circuit inside the
+microcode sequencer. we route the flag from IR into this circuit,
+and this will allow us to test its value.
+
+at the end of the microinstruction block for a given repetable instruction
+we create a micro-instruction of the "branch" type.
+
+this branch type micro will test the REP flag and if the value is true,
+it will take a microcode branch and go back to the beginning of the
+microcode block, and re-execute the instruction.
+
+if the flag is 0, we simply leave the instruction.

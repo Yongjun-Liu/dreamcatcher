@@ -1,0 +1,29 @@
+HALT:
+
+we try-state the address,data and control buses.
+
+
+PC <- PC - 2; 	we backtrack PC by the halt opcode
+		;	so that if there are no interrupts,
+		;	we just re-execute the halt instruction
+
+here we test if there are any interrupts pending,
+by checking the int_pending pin in the microcode
+sequencer condition testing machine.
+if there are interrupts pending, 
+we first un-tri-state the buses. 
+we then add 2 to PC again,
+so that it points to after the HALT instruction.
+if there are no interrupts, we jump the addition of +2 to PC.
+either way, we will arrive at a micro-instruction which has to be
+of the pre-fetch type.
+
+if there is an int, then it will branch to the interrupt handler
+micro-instruction block. if there are no ints, it will simply fetch
+the HALT again.
+
+if there is an interrupt pending, it jumps to the int handler block,
+saves the status, writes the correct address of the int to PC, and
+jumps to a fetch micro_routine.
+the PC will be then pointing to just after the HALT, and when the interrupt
+is done, it will resume to the instruction just after HALT.

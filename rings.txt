@@ -1,0 +1,16 @@
+if the OS loads a process, then it looks up in a table, what the segments for
+that process are, and loads them into the segment registers.
+
+a process cannot change the segment registers unless it is in ring 0.
+
+ring 0 is the OS.
+
+when the CPU comes on from reset, it sets the priority to ring0, and the OS is loaded.
+
+after the OS is loaded, if a process is called, the OS loads the segment registers and calls the
+process.
+
+each process has a 64KB code space, 64KB data space, 64KB stack space and 64KB extra space.
+
+
+(FORFEITED IDEA)

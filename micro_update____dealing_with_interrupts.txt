@@ -1,0 +1,32 @@
+INTRODUCTION:
+
+i had the idea of improving the speed of execution by making eaxh instruction responsible 
+for fetching the next instruction. so we dont need to keep jumping to the fetch microroutine 
+each time we need to fetch the next opcode. this would speed-up execution by a little,
+but there is a problem, because if we dont utilize the fetch micro-instruction, then
+there wont be any microinstructions of the pre-fetch type, and only this type can recognize
+interrupts, traps, and DMA requests. So we need to solve this problem by testing out to see
+if there are any requests before deciding what to do.
+
+
+
+SOLUTION:
+while executing an instruction, we can start feching the next instruction.
+when we are done executing the current instruction, we then have to microcode jump
+based on IR, so we can start executing the next instruction. because remember, fetching an instruction means putting its opcode into IR so we can take the microcode jump to execute the instruction.
+
+however, if there is an interrupt, trap, or DMA request pending, if we simply dispatch to execute
+the next instruction by bypassing the fetch micro-sequence, then the request won't be seen,
+because we only recognize them when the current micro-instruction type is pre-fetch. this is just
+a technicality, and the way I designed it.
+
+so in fact, we will need to test to see if there are any external requests before executing
+the next instruction. if there are any requests, we will have to back off PC by the opcode length,
+and then we will havr to take a microcode jump by just a few positions, so we land on a micro-instruction
+os the ore-fetch type, so we can then recognize the request. the sequencer, then, seeing that there are requests,
+will jump to deal with the request instead of jumping to fetch. when all is done, the CPU will simply continue
+from where it left off, by poping PC off the stack and fetching.
+
+if on the other hand, there were no requests then we don't need to back off PC, and we can simply
+continue, since we have already fetched the next instruction and the opcode is in IR, we can just
+take a microcode jump to the micro-instruction given by IR.

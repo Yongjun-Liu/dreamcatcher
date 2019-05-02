@@ -1,120 +1,174 @@
-;; total of 112 control bits.
-;; about 26 of which are used inside the microcode board itself
-;; so a total of ~86 lines need to be sent out only
+************************* MICROCODE CONTROL WORD *************************
 
-x : 31 registers + TDR(2) + MDR(4) + INT_STATUS + INT_CODE = 39
-y : TDR(2) + MDR(4) = 6
+;; Total of 120 control bits. this requires 15 ROMS.
+;; About 26 of which are used inside the microcode board itself
+;; A total of ~86 lines need to be sent out only
 
-typ0
-typ1
-COND_SRC_0 		; programmer's flag, microcode flags, or directly from ALU ?
-COND_SRC_1		; 00 = programmers, 01 = microcode, 10 = ALU
-cond_sel_0
-cond_sel_1
-cond_sel_2
-cond_invert
+x : 31 registers + TDR(2) + MDR(4) + INT_STATUS + INT_CODE = 39 ********** needs 6 bits
+y : TDR(2) + MDR(4) + IMM_Y(1) + DATA(1) ******* needs 3 bits
 
-OFFSET0			; jump offset. from -64 to 63
-OFFSET1
+************************* NOTES *******************************************
+
+REMEMBER TO FIX THE LOCATION OF EVERY CONTROL BIT
+SO THAT THE ROM BITS CAN HAVE THE SHORTEST PATH TO THEIR DESTINATION.
+
+***************************************************************************
+
+*************** 0 ***************
+
+typ_0
+typ_1
+COND_SRC_0 				; programmer's flag, microcode flags, or directly from ALU ?
+COND_SRC_1				; 00 = programmers, 01 = microcode, 10 = ALU
+COND_SRC_UZF_AND			; 0=ZF_FROM_ALU, 1=U_ZF and ZF_FROM_ALU
+cond_sel_0				; 000=ZF, 001=CF, 010=SF, 011=OF
+cond_sel_1				; 100=LTU, 101=LTEU, 110=LT, 111=LTE
+cond_sel_2				;  
+
+*************** 1 ***************
+
+cond_invert			; invert final condition ?
+OFFSET0			; microcode jump offset
+OFFSET1			; from -64 to 63
 OFFSET2
 OFFSET3
 OFFSET4
 OFFSET5
 OFFSET6
 
-U_ZF_IN_SRC_0
-U_ZF_IN_SRC_1
-U_CF_IN_SRC_0
-U_CF_IN_SRC_1
-U_SF_IN_SRC
-U_OF_IN_SRC
-TRAP_ACK
+*************** 2 ***************
 
-ZF_IN_SRC_0
-ZF_IN_SRC_1
-CF_IN_SRC_0
-CF_IN_SRC_1
-SF_IN_SRC_0
-SF_IN_SRC_1
-OF_IN_SRC_0
-OF_IN_SRC_1
+U_ZF_IN_SRC_0		; 00=U_ZF, 01=ZF_FROM_ALU 
+U_ZF_IN_SRC_1		; 10=U_ZF && ZF_FROM_ALU
+U_CF_IN_SRC_0		; 00=U_CF, 01=ALU_FINAL_CF
+U_CF_IN_SRC_1		; 10=ALU_0, 11=ALU_7
+U_SF_IN_SRC			; 0=U_SF, 1=SF_FROM_ALU
+U_OF_IN_SRC			; 0=U_OF, 1=OF_FROM_ALU
+TRAP_ACK			; clear TRAP flip-flop
 
-OF_IN_SRC_2
-INT_ACK
+*************** 3 ***************
+
+INT_ACK			; clear interrupt flip-flops
+ZF_IN_SRC_0			; 00=ZF, 01=ZF_FROM_ALU
+ZF_IN_SRC_1			; 10=ZF_FROM_ALU && ZF, 11=ZBUS_0
+CF_IN_SRC_0			; 000=CF, 001=ALU_FINAL_CF
+CF_IN_SRC_1			; 010=ALU_0, 011=ZBUS_1
+CF_IN_SRC_2			; 100=ALU_7
+SF_IN_SRC_0			; 00=SF, 01=ZBUS_7
+SF_IN_SRC_1			; 10=GND, 11=ZBUS_2
+
+
+
+
+*************** 4 ***************
+
+OF_IN_SRC_0			; 000=OF, 001=OF_FROM_ALU, 
+				; 010=ZBUS_7, 011=ZBUS_3
+OF_IN_SRC_1			; 100=(U_SF) XOR (SF_FROM_ALU)
+OF_IN_SRC_2			;
 ALU_op0
 ALU_op1
 ALU_op2
 ALU_op3
 ALU_mode
-ALU_CF_IN_SRC0		; carry from microcode flags or programmer's flags?
 
+*************** 5 ***************
+
+ALU_CF_IN_SRC0		; carry from microcode flags or programmer's flags?
 ALU_CF_IN_SRC1		; ZERO, 1, CF, ~CF ?
 ALU_CF_IN_SRC2		;
 ALU_CF_OUT_INV		; invert carry out ?
 ALU_X_SRC_0
 ALU_X_SRC_1
 ALU_X_SRC_2
+ALU_X_SRC_3
+
+
+*************** 6 ***************
+
 ALU_X_SRC_4
 ALU_X_SRC_5
-
 ALU_Y_SRC_0
 ALU_Y_SRC_1
 ALU_Y_SRC_2
 ALU_Y_SRC_3
+ZBUS_IN_SRC_0		; 00=ALU, 01=SHR, 10=SHL
 
-ZBUS_IN_SRC		; from ALU or shift right machine ?
+*************** 7 ***************
+
+
+ZBUS_IN_SRC_1		;
 SHR_MSB_SRC_0		; 000 = 0, 001 = U_CF, 010 = CF, 011 = ALU_7, 100 = ALU_0	
 SHR_MSB_SRC_1		; 
-SHR_MSB_SRC_2		; 	
-MDRL_IN_src		; data bus or Z bus?
-
-MDRH_IN_src		; data bus or Z bus?
+SHR_MSB_SRC_2		;
+MDRL_IN_src			; data bus or Z bus?
+MDRH_IN_src			; data bus or Z bus?
 MDR_DATA_OUT_SRC_0
 MDR_DATA_OUT_SRC_1
+
+
+
+*************** 8 ***************
+
 ADDR_SEGMENT_SRC_0
 ADDR_SEGMENT_SRC_1
 ADDR_OFFSET_SRC_0
 ADDR_OFFSET_SRC_1
+SIDI_IN_SRC			; SI/DI INPUT SRC : ZBUS OR ADDER ?
+PMSC_SRC			; ZBUS OR arithmetic operation goes into PC, SP, MAR, C ?
+PMSC_SRC_0			; chooses which register is added with IMM_ADDR constant
+PMSC_SRC_1			;
 
-SIDI_IN_SRC		; SI/DI INPUT SRC : ZBUS OR ADDER ?
-PMSC_SRC		; ZBUS OR arithmetic operation goes into PC, SP, MAR, C ?
-PMSC_SRC_0		; chooses which register is added with IMM_ADDR constant
-PMSC_SRC_1		;
+
+*************** 9 ***************
 
 a_L_wrt
 a_H_wrt
 b_L_wrt
 b_H_wrt
 c_L_wrt
-
 c_H_wrt
 d_L_wrt
 d_H_wrt
+
+
+*************** 10 ***************
+
 CS_L_WRT
 CS_H_WRT
 DS_L_WRT
 DS_H_WRT
 SS_L_WRT
-
 SS_H_WRT
 ES_L_WRT
 ES_H_WRT
+
+
+*************** 11 ***************
+
 SI_L_WRT
 SI_H_WRT
 DI_L_WRT
 DI_H_WRT
 spl_wrt
-
 sph_wrt
 bpl_wrt
 bph_wrt
+
+
+*************** 12 ***************
+
 pcl_wrt
 pch_wrt
 IR_wrt
 INT_DMA_CODE_WRT		; saves the current interrupt code to a flip flop. also saves the DMA_REQ bit to the FF to be used by DMA loop
 MASK_FLAGS_WRT
-	
 AUX_FLAGS_WRT
+
+
+
+*************** 13 ***************
+
 tdr_L_wrt
 tdr_H_wrt
 MAR_L_wrt
@@ -122,32 +176,33 @@ MAR_H_wrt
 MDRL_L_WRT
 MDRL_H_WRT
 MDRH_L_wrt
-
 MDRH_H_wrt
-immy_0		; constant from microcode
+
+
+
+*************** 14 ***************
+
+immy_0			; constant from microcode
 immy_1
 immy_2
 immy_3
 immy_4
 immy_5
 immy_6
-
 immy_7
-imm_addr_0	; used for PC, MAR, SP, A, SI, DI
+
+
+
+*************** 15 ***************
+
+imm_addr_0			; used for PC, MAR, SP, A, SI, DI
 imm_addr_1
 imm_addr_2
-imm_addr_3
-imm_addr_4	; from -16 to 15
-
+imm_addr_3			; from -8 to 7
 MDR_DATA_OUT		; inverted
-RD			- inverted
-WR			- inverted
+RD				; inverted
+WR				; inverted
 M_IO
-
-
-
-
-
 
 
 

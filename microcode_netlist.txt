@@ -1,0 +1,976 @@
+Netlist
+
+Exported from MICROCODE.sch at 07/04/2018 00:34
+
+EAGLE Version 7.6.0 Copyright (c) 1988-2016 CadSoft
+
+Net             Part          Pad      Pin        Sheet
+
+1               2OR_0         13       I1         1
+                2OR_1         2        I1         1
+                COND_MUX_0    7        1Y         1
+                COND_MUX_2    4        D0         1
+
+2               2OR_1         1        I0         1
+                COND_MUX_0    9        2Y         1
+                COND_MUX_2    15       D4         1
+                COND_MUX_2    3        D1         1
+
+3               2XOR_0        1        I0         1
+                COND_MUX_1    7        1Y         1
+                COND_MUX_2    2        D2         1
+
+4               2XOR_0        2        I1         1
+                COND_MUX_1    9        2Y         1
+                COND_MUX_2    1        D3         1
+
+ALU_0           U_FLAGS_MUX_1 4        1C2        1
+
+ALU_FINAL_CF    COND_MUX_0    12       2C2        1
+                U_FLAGS_MUX_1 5        1C1        1
+
+CF              COND_MUX_0    10       2C0        1
+
+CONDITION       2XOR_0        5        I1         1
+                COND_MUX_2    5        Y          1
+
+COND_INVERT     2XOR_0        4        I0         1
+
+COND_SEL_0      COND_MUX_2    11       A          1
+
+COND_SEL_1      COND_MUX_2    10       B          1
+
+COND_SEL_2      COND_MUX_2    9        C          1
+
+COND_SRC_0      COND_MUX_0    14       A          1
+                COND_MUX_1    14       A          1
+
+COND_SRC_1      COND_MUX_0    2        B          1
+                COND_MUX_1    2        B          1
+
+DATA0           IR_H          3        1D         1
+                IR_L          3        1D         1
+
+DATA1           IR_H          4        2D         1
+                IR_L          4        2D         1
+
+DATA2           IR_H          7        3D         1
+                IR_L          7        3D         1
+
+DATA3           IR_H          8        4D         1
+                IR_L          8        4D         1
+
+DATA4           IR_H          13       5D         1
+                IR_L          13       5D         1
+
+DATA5           IR_H          14       6D         1
+                IR_L          14       6D         1
+
+DATA6           IR_H          17       7D         1
+                IR_L          17       7D         1
+
+DATA7           IR_H          18       8D         1
+                IR_L          18       8D         1
+
+DMA_PENDING     2OR_0         9        I0         1
+                NOT_0         13       I          1
+
+FINAL_CONDITION 2XOR_0        6        O          1
+                NOT_0         3        I          1
+
+GND             2AND_0        7        GND        * none *
+                2AND_1        7        GND        * none *
+                2OR_0         7        GND        * none *
+                2OR_1         7        GND        * none *
+                2XOR_0        7        GND        * none *
+                3AND_0        7        GND        * none *
+                4NAND_0       7        GND        * none *
+                COND_MUX_0    1        1G         1
+                COND_MUX_0    13       2C3        1
+                COND_MUX_0    15       2G         1
+                COND_MUX_0    8        GND        * none *
+                COND_MUX_1    1        1G         1
+                COND_MUX_1    13       2C3        1
+                COND_MUX_1    15       2G         1
+                COND_MUX_1    3        1C3        1
+                COND_MUX_1    8        GND        * none *
+                COND_MUX_2    7        G          1
+                COND_MUX_2    8        GND        * none *
+                IR_H          10       GND        * none *
+                IR_L          10       GND        * none *
+                NOT_0         7        GND        * none *
+                NOT_1         7        GND        * none *
+                RN2           10       2          1
+                RN2           11       2          1
+                RN2           12       2          1
+                RN2           13       2          1
+                RN2           14       2          1
+                RN2           15       2          1
+                RN2           16       2          1
+                RN2           9        2          1
+                RN3           10       2          1
+                RN3           11       2          1
+                RN3           12       2          1
+                RN3           13       2          1
+                RN3           14       2          1
+                RN3           15       2          1
+                RN3           16       2          1
+                RN3           9        2          1
+                RN4           10       2          1
+                RN4           11       2          1
+                RN4           12       2          1
+                RN4           13       2          1
+                RN4           14       2          1
+                RN4           15       2          1
+                RN4           16       2          1
+                RN4           9        2          1
+                RN5           10       2          1
+                RN5           11       2          1
+                RN5           12       2          1
+                RN5           13       2          1
+                RN5           14       2          1
+                RN5           15       2          1
+                RN5           16       2          1
+                RN5           9        2          1
+                U_ADDER_0     7        C0         1
+                U_ADDER_0     8        GND        * none *
+                U_ADDER_1     8        GND        * none *
+                U_ADDER_2     8        GND        * none *
+                U_ADDER_3     8        GND        * none *
+                U_ADDER_MUX_0 11       3A         1
+                U_ADDER_MUX_0 14       4A         1
+                U_ADDER_MUX_0 15       G          1
+                U_ADDER_MUX_0 5        2A         1
+                U_ADDER_MUX_0 8        GND        * none *
+                U_ADDER_MUX_1 11       3A         1
+                U_ADDER_MUX_1 14       4A         1
+                U_ADDER_MUX_1 15       G          1
+                U_ADDER_MUX_1 2        1A         1
+                U_ADDER_MUX_1 5        2A         1
+                U_ADDER_MUX_1 8        GND        * none *
+                U_ADDER_MUX_2 11       3A         1
+                U_ADDER_MUX_2 14       4A         1
+                U_ADDER_MUX_2 15       G          1
+                U_ADDER_MUX_2 2        1A         1
+                U_ADDER_MUX_2 5        2A         1
+                U_ADDER_MUX_2 8        GND        * none *
+                U_ADDER_MUX_3 11       3A         1
+                U_ADDER_MUX_3 14       4A         1
+                U_ADDER_MUX_3 15       G          1
+                U_ADDER_MUX_3 2        1A         1
+                U_ADDER_MUX_3 5        2A         1
+                U_ADDER_MUX_3 8        GND        * none *
+                U_ADDR_H      1        CLR        1
+                U_ADDR_H      10       GND        * none *
+                U_ADDR_L      1        CLR        1
+                U_ADDR_L      10       GND        * none *
+                U_ADDR_MUX_0  12       D7         1
+                U_ADDR_MUX_0  13       D6         1
+                U_ADDR_MUX_0  3        D1         1
+                U_ADDR_MUX_0  7        G          1
+                U_ADDR_MUX_0  8        GND        * none *
+                U_ADDR_MUX_1  12       D7         1
+                U_ADDR_MUX_1  13       D6         1
+                U_ADDR_MUX_1  3        D1         1
+                U_ADDR_MUX_1  7        G          1
+                U_ADDR_MUX_1  8        GND        * none *
+                U_ADDR_MUX_10 1        D3         1
+                U_ADDR_MUX_10 12       D7         1
+                U_ADDR_MUX_10 13       D6         1
+                U_ADDR_MUX_10 14       D5         1
+                U_ADDR_MUX_10 15       D4         1
+                U_ADDR_MUX_10 2        D2         1
+                U_ADDR_MUX_10 7        G          1
+                U_ADDR_MUX_10 8        GND        * none *
+                U_ADDR_MUX_11 1        D3         1
+                U_ADDR_MUX_11 12       D7         1
+                U_ADDR_MUX_11 13       D6         1
+                U_ADDR_MUX_11 14       D5         1
+                U_ADDR_MUX_11 15       D4         1
+                U_ADDR_MUX_11 2        D2         1
+                U_ADDR_MUX_11 7        G          1
+                U_ADDR_MUX_11 8        GND        * none *
+                U_ADDR_MUX_12 1        D3         1
+                U_ADDR_MUX_12 12       D7         1
+                U_ADDR_MUX_12 13       D6         1
+                U_ADDR_MUX_12 14       D5         1
+                U_ADDR_MUX_12 15       D4         1
+                U_ADDR_MUX_12 2        D2         1
+                U_ADDR_MUX_12 7        G          1
+                U_ADDR_MUX_12 8        GND        * none *
+                U_ADDR_MUX_13 1        D3         1
+                U_ADDR_MUX_13 12       D7         1
+                U_ADDR_MUX_13 13       D6         1
+                U_ADDR_MUX_13 14       D5         1
+                U_ADDR_MUX_13 15       D4         1
+                U_ADDR_MUX_13 2        D2         1
+                U_ADDR_MUX_13 7        G          1
+                U_ADDR_MUX_13 8        GND        * none *
+                U_ADDR_MUX_14 1        D3         1
+                U_ADDR_MUX_14 12       D7         1
+                U_ADDR_MUX_14 13       D6         1
+                U_ADDR_MUX_14 14       D5         1
+                U_ADDR_MUX_14 15       D4         1
+                U_ADDR_MUX_14 2        D2         1
+                U_ADDR_MUX_14 7        G          1
+                U_ADDR_MUX_14 8        GND        * none *
+                U_ADDR_MUX_15 1        D3         1
+                U_ADDR_MUX_15 12       D7         1
+                U_ADDR_MUX_15 13       D6         1
+                U_ADDR_MUX_15 14       D5         1
+                U_ADDR_MUX_15 15       D4         1
+                U_ADDR_MUX_15 2        D2         1
+                U_ADDR_MUX_15 7        G          1
+                U_ADDR_MUX_15 8        GND        * none *
+                U_ADDR_MUX_2  12       D7         1
+                U_ADDR_MUX_2  13       D6         1
+                U_ADDR_MUX_2  3        D1         1
+                U_ADDR_MUX_2  7        G          1
+                U_ADDR_MUX_2  8        GND        * none *
+                U_ADDR_MUX_3  12       D7         1
+                U_ADDR_MUX_3  13       D6         1
+                U_ADDR_MUX_3  3        D1         1
+                U_ADDR_MUX_3  7        G          1
+                U_ADDR_MUX_3  8        GND        * none *
+                U_ADDR_MUX_4  12       D7         1
+                U_ADDR_MUX_4  13       D6         1
+                U_ADDR_MUX_4  7        G          1
+                U_ADDR_MUX_4  8        GND        * none *
+                U_ADDR_MUX_5  12       D7         1
+                U_ADDR_MUX_5  13       D6         1
+                U_ADDR_MUX_5  7        G          1
+                U_ADDR_MUX_5  8        GND        * none *
+                U_ADDR_MUX_6  12       D7         1
+                U_ADDR_MUX_6  13       D6         1
+                U_ADDR_MUX_6  7        G          1
+                U_ADDR_MUX_6  8        GND        * none *
+                U_ADDR_MUX_7  12       D7         1
+                U_ADDR_MUX_7  13       D6         1
+                U_ADDR_MUX_7  7        G          1
+                U_ADDR_MUX_7  8        GND        * none *
+                U_ADDR_MUX_8  1        D3         1
+                U_ADDR_MUX_8  12       D7         1
+                U_ADDR_MUX_8  13       D6         1
+                U_ADDR_MUX_8  14       D5         1
+                U_ADDR_MUX_8  15       D4         1
+                U_ADDR_MUX_8  2        D2         1
+                U_ADDR_MUX_8  7        G          1
+                U_ADDR_MUX_8  8        GND        * none *
+                U_ADDR_MUX_9  1        D3         1
+                U_ADDR_MUX_9  12       D7         1
+                U_ADDR_MUX_9  13       D6         1
+                U_ADDR_MUX_9  14       D5         1
+                U_ADDR_MUX_9  15       D4         1
+                U_ADDR_MUX_9  2        D2         1
+                U_ADDR_MUX_9  7        G          1
+                U_ADDR_MUX_9  8        GND        * none *
+                U_FLAGS       10       GND        * none *
+                U_FLAGS       13       D5         1
+                U_FLAGS       14       D6         1
+                U_FLAGS       17       D7         1
+                U_FLAGS       18       D8         1
+                U_FLAGS_MUX_0 1        1G         1
+                U_FLAGS_MUX_0 10       2C0        1
+                U_FLAGS_MUX_0 11       2C1        1
+                U_FLAGS_MUX_0 12       2C2        1
+                U_FLAGS_MUX_0 13       2C3        1
+                U_FLAGS_MUX_0 15       2G         1
+                U_FLAGS_MUX_0 3        1C3        1
+                U_FLAGS_MUX_0 8        GND        * none *
+                U_FLAGS_MUX_1 1        1G         1
+                U_FLAGS_MUX_1 10       2C0        1
+                U_FLAGS_MUX_1 11       2C1        1
+                U_FLAGS_MUX_1 12       2C2        1
+                U_FLAGS_MUX_1 13       2C3        1
+                U_FLAGS_MUX_1 15       2G         1
+                U_FLAGS_MUX_1 3        1C3        1
+                U_FLAGS_MUX_1 8        GND        * none *
+                U_FLAGS_MUX_2 10       3B         1
+                U_FLAGS_MUX_2 11       3A         1
+                U_FLAGS_MUX_2 13       4B         1
+                U_FLAGS_MUX_2 14       4A         1
+                U_FLAGS_MUX_2 15       G          1
+                U_FLAGS_MUX_2 5        2A         1
+                U_FLAGS_MUX_2 6        2B         1
+                U_FLAGS_MUX_2 8        GND        * none *
+                U_FLAGS_MUX_3 10       3B         1
+                U_FLAGS_MUX_3 11       3A         1
+                U_FLAGS_MUX_3 13       4B         1
+                U_FLAGS_MUX_3 14       4A         1
+                U_FLAGS_MUX_3 15       G          1
+                U_FLAGS_MUX_3 5        2A         1
+                U_FLAGS_MUX_3 6        2B         1
+                U_FLAGS_MUX_3 8        GND        * none *
+
+INT_PENDING     2AND_0        13       I1         1
+                3AND_0        3        I0         1
+
+IR_0            IR_L          2        1Q         1
+                U_ADDR_MUX_4  3        D1         1
+
+IR_1            IR_L          5        2Q         1
+                U_ADDR_MUX_5  3        D1         1
+
+IR_2            IR_L          6        3Q         1
+                U_ADDR_MUX_6  3        D1         1
+
+IR_3            IR_L          9        4Q         1
+                U_ADDR_MUX_7  3        D1         1
+
+IR_4            IR_L          12       5Q         1
+                U_ADDR_MUX_8  3        D1         1
+
+IR_5            IR_L          15       6Q         1
+                U_ADDR_MUX_9  3        D1         1
+
+IR_6            IR_L          16       7Q         1
+                U_ADDR_MUX_10 3        D1         1
+
+IR_7            IR_L          19       8Q         1
+                U_ADDR_MUX_11 3        D1         1
+
+IR_8            IR_H          2        1Q         1
+                U_ADDR_MUX_12 3        D1         1
+
+IR_9            IR_H          5        2Q         1
+                U_ADDR_MUX_13 3        D1         1
+
+IR_10           IR_H          6        3Q         1
+                U_ADDR_MUX_14 3        D1         1
+
+IR_11           IR_H          9        4Q         1
+                U_ADDR_MUX_15 3        D1         1
+
+IR_H_WRT        IR_H          1        G          1
+
+IR_L_WRT        IR_L          1        G          1
+
+MUX_A           2AND_0        8        O          1
+                U_ADDR_MUX_0  11       A          1
+                U_ADDR_MUX_1  11       A          1
+                U_ADDR_MUX_10 11       A          1
+                U_ADDR_MUX_11 11       A          1
+                U_ADDR_MUX_12 11       A          1
+                U_ADDR_MUX_13 11       A          1
+                U_ADDR_MUX_14 11       A          1
+                U_ADDR_MUX_15 11       A          1
+                U_ADDR_MUX_2  11       A          1
+                U_ADDR_MUX_3  11       A          1
+                U_ADDR_MUX_4  11       A          1
+                U_ADDR_MUX_5  11       A          1
+                U_ADDR_MUX_6  11       A          1
+                U_ADDR_MUX_7  11       A          1
+                U_ADDR_MUX_8  11       A          1
+                U_ADDR_MUX_9  11       A          1
+
+MUX_B           3AND_0        8        O          1
+                U_ADDR_MUX_0  10       B          1
+                U_ADDR_MUX_1  10       B          1
+                U_ADDR_MUX_10 10       B          1
+                U_ADDR_MUX_11 10       B          1
+                U_ADDR_MUX_12 10       B          1
+                U_ADDR_MUX_13 10       B          1
+                U_ADDR_MUX_14 10       B          1
+                U_ADDR_MUX_15 10       B          1
+                U_ADDR_MUX_2  10       B          1
+                U_ADDR_MUX_3  10       B          1
+                U_ADDR_MUX_4  10       B          1
+                U_ADDR_MUX_5  10       B          1
+                U_ADDR_MUX_6  10       B          1
+                U_ADDR_MUX_7  10       B          1
+                U_ADDR_MUX_8  10       B          1
+                U_ADDR_MUX_9  10       B          1
+
+MUX_C           NOT_1         2        O          1
+                U_ADDR_MUX_0  9        C          1
+                U_ADDR_MUX_1  9        C          1
+                U_ADDR_MUX_10 9        C          1
+                U_ADDR_MUX_11 9        C          1
+                U_ADDR_MUX_12 9        C          1
+                U_ADDR_MUX_13 9        C          1
+                U_ADDR_MUX_14 9        C          1
+                U_ADDR_MUX_15 9        C          1
+                U_ADDR_MUX_2  9        C          1
+                U_ADDR_MUX_3  9        C          1
+                U_ADDR_MUX_4  9        C          1
+                U_ADDR_MUX_5  9        C          1
+                U_ADDR_MUX_6  9        C          1
+                U_ADDR_MUX_7  9        C          1
+                U_ADDR_MUX_8  9        C          1
+                U_ADDR_MUX_9  9        C          1
+
+N$1             2AND_1        3        O          1
+                COND_MUX_0    3        1C3        1
+
+N$2             3AND_0        12       O          1
+                NOT_0         5        I          1
+
+N$3             U_ADDER_0     9        C4         1
+                U_ADDER_1     7        C0         1
+
+N$4             U_ADDER_2     9        C4         1
+                U_ADDER_3     7        C0         1
+
+N$5             U_ADDER_0     6        B1         1
+                U_ADDER_MUX_0 4        1Y         1
+
+N$6             U_ADDER_0     2        B2         1
+                U_ADDER_MUX_0 7        2Y         1
+
+N$7             U_ADDER_0     15       B3         1
+                U_ADDER_MUX_0 9        3Y         1
+
+N$8             U_ADDER_0     11       B4         1
+                U_ADDER_MUX_0 12       4Y         1
+
+N$9             U_ADDER_1     6        B1         1
+                U_ADDER_MUX_1 4        1Y         1
+
+N$10            U_ADDER_1     2        B2         1
+                U_ADDER_MUX_1 7        2Y         1
+
+N$11            U_ADDER_1     15       B3         1
+                U_ADDER_MUX_1 9        3Y         1
+
+N$12            4NAND_0       6        O          1
+                NOT_1         1        I          1
+
+N$13            U_ADDER_1     11       B4         1
+                U_ADDER_MUX_1 12       4Y         1
+
+N$15            U_ADDER_2     6        B1         1
+                U_ADDER_MUX_2 4        1Y         1
+
+N$16            U_ADDER_2     2        B2         1
+                U_ADDER_MUX_2 7        2Y         1
+
+N$17            U_ADDER_2     15       B3         1
+                U_ADDER_MUX_2 9        3Y         1
+
+N$18            U_ADDER_2     11       B4         1
+                U_ADDER_MUX_2 12       4Y         1
+
+N$19            U_ADDER_3     6        B1         1
+                U_ADDER_MUX_3 4        1Y         1
+
+N$20            U_ADDER_3     2        B2         1
+                U_ADDER_MUX_3 7        2Y         1
+
+N$21            NOT_0         6        O          1
+                U_ADDER_MUX_0 1        !A!/B      1
+                U_ADDER_MUX_1 1        !A!/B      1
+                U_ADDER_MUX_2 1        !A!/B      1
+                U_ADDER_MUX_3 1        !A!/B      1
+
+N$22            3AND_0        13       I2         1
+                NOT_0         4        O          1
+
+N$23            3AND_0        2        I1         1
+                NOT_0         2        O          1
+
+N$24            U_ADDR_L      3        D1         1
+                U_ADDR_MUX_0  5        Y          1
+
+N$25            U_ADDR_L      4        D2         1
+                U_ADDR_MUX_1  5        Y          1
+
+N$26            U_ADDR_L      7        D3         1
+                U_ADDR_MUX_2  5        Y          1
+
+N$27            U_ADDR_L      8        D4         1
+                U_ADDR_MUX_3  5        Y          1
+
+N$28            U_ADDR_L      13       D5         1
+                U_ADDR_MUX_4  5        Y          1
+
+N$29            U_ADDR_L      14       D6         1
+                U_ADDR_MUX_5  5        Y          1
+
+N$30            U_ADDR_L      17       D7         1
+                U_ADDR_MUX_6  5        Y          1
+
+N$31            U_ADDR_L      18       D8         1
+                U_ADDR_MUX_7  5        Y          1
+
+N$32            U_ADDR_H      3        D1         1
+                U_ADDR_MUX_8  5        Y          1
+
+N$33            U_ADDR_H      4        D2         1
+                U_ADDR_MUX_9  5        Y          1
+
+N$34            U_ADDR_H      7        D3         1
+                U_ADDR_MUX_10 5        Y          1
+
+N$35            U_ADDR_H      11       CLK        1
+                U_ADDR_L      11       CLK        1
+
+N$36            IR_H          11       CLK        1
+                IR_L          11       CLK        1
+
+N$41            U_ADDR_H      8        D4         1
+                U_ADDR_MUX_11 5        Y          1
+
+N$42            U_ADDR_H      13       D5         1
+                U_ADDR_MUX_12 5        Y          1
+
+N$43            U_ADDR_H      14       D6         1
+                U_ADDR_MUX_13 5        Y          1
+
+N$45            U_ADDER_3     15       B3         1
+                U_ADDER_MUX_3 9        3Y         1
+
+N$46            U_ADDER_3     11       B4         1
+                U_ADDER_MUX_3 12       4Y         1
+
+N$47            U_FLAGS       4        D2         1
+                U_FLAGS_MUX_1 7        1Y         1
+
+N$48            2AND_0        3        O          1
+                U_FLAGS_MUX_0 4        1C2        1
+
+N$49            U_FLAGS       3        D1         1
+                U_FLAGS_MUX_0 7        1Y         1
+
+N$50            U_FLAGS       8        D4         1
+                U_FLAGS_MUX_3 4        1Y         1
+
+N$51            U_FLAGS       7        D3         1
+                U_FLAGS_MUX_2 4        1Y         1
+
+N$86            2OR_1         3        O          1
+                COND_MUX_2    14       D5         1
+
+N$93            2OR_0         11       O          1
+                COND_MUX_2    12       D7         1
+
+N$94            2AND_0        9        I0         1
+                2OR_0         6        O          1
+
+N$130           2AND_0        6        O          1
+                2OR_0         4        I0         1
+
+N$173           2AND_0        5        I1         1
+                3AND_0        10       I1         1
+                4NAND_0       2        I1         1
+                NOT_0         8        O          1
+
+N$225           U_ADDR_H      17       D7         1
+                U_ADDR_MUX_14 5        Y          1
+
+N$228           U_ADDR_H      18       D8         1
+                U_ADDR_MUX_15 5        Y          1
+
+N$358           U_ADDER_1     9        C4         1
+                U_ADDER_2     7        C0         1
+
+N$705           2AND_0        4        I0         1
+                2OR_0         3        O          1
+
+N$706           2OR_0         2        I1         1
+                3AND_0        6        O          1
+
+N$707           3AND_0        5        I2         1
+                4NAND_0       4        I2         1
+                NOT_0         10       O          1
+
+N$708           2AND_0        12       I0         1
+                3AND_0        4        I1         1
+                NOT_0         12       O          1
+
+N$710           2AND_0        11       O          1
+                2OR_0         10       I1         1
+
+N$711           2OR_0         8        O          1
+                4NAND_0       5        I3         1
+
+OF              COND_MUX_1    10       2C0        1
+
+OF_FROM_ALU     COND_MUX_1    12       2C2        1
+                U_FLAGS_MUX_3 3        1B         1
+
+SF              COND_MUX_1    6        1C0        1
+
+SF_FROM_ALU     COND_MUX_1    4        1C2        1
+                U_FLAGS_MUX_2 3        1B         1
+
+SF_XOR_OF1      2OR_0         12       I0         1
+                2XOR_0        3        O          1
+                COND_MUX_2    13       D6         1
+
+TRAP_PENDING    2OR_0         1        I0         1
+                3AND_0        11       I2         1
+                NOT_0         11       I          1
+
+TYP0            2OR_0         5        I1         1
+                3AND_0        1        I0         1
+                NOT_0         9        I          1
+
+TYP1            2AND_0        10       I1         1
+                3AND_0        9        I0         1
+                4NAND_0       1        I0         1
+                NOT_0         1        I          1
+
+U_AD0           U_ADDER_0     5        A1         1
+                U_ADDR_L      2        Q1         1
+
+U_AD1           U_ADDER_0     3        A2         1
+                U_ADDR_L      5        Q2         1
+
+U_AD2           U_ADDER_0     14       A3         1
+                U_ADDR_L      6        Q3         1
+
+U_AD3           U_ADDER_0     12       A4         1
+                U_ADDR_L      9        Q4         1
+
+U_AD4           U_ADDER_1     5        A1         1
+                U_ADDR_L      12       Q5         1
+
+U_AD5           U_ADDER_1     3        A2         1
+                U_ADDR_L      15       Q6         1
+
+U_AD6           U_ADDER_1     14       A3         1
+                U_ADDR_L      16       Q7         1
+
+U_AD7           U_ADDER_1     12       A4         1
+                U_ADDR_L      19       Q8         1
+
+U_AD8           U_ADDER_2     5        A1         1
+                U_ADDR_H      2        Q1         1
+
+U_AD9           U_ADDER_2     3        A2         1
+                U_ADDR_H      5        Q2         1
+
+U_AD10          U_ADDER_2     14       A3         1
+                U_ADDR_H      6        Q3         1
+
+U_AD11          U_ADDER_2     12       A4         1
+                U_ADDR_H      9        Q4         1
+
+U_AD12          U_ADDER_3     5        A1         1
+                U_ADDR_H      12       Q5         1
+
+U_AD13          U_ADDER_3     3        A2         1
+                U_ADDR_H      15       Q6         1
+
+U_AD14          U_ADDER_3     14       A3         1
+                U_ADDR_H      16       Q7         1
+
+U_AD15          U_ADDER_3     12       A4         1
+                U_ADDR_H      19       Q8         1
+
+U_ADDER_0       U_ADDER_0     4        S1         1
+                U_ADDR_MUX_0  4        D0         1
+
+U_ADDER_1       U_ADDER_0     1        S2         1
+                U_ADDR_MUX_1  4        D0         1
+
+U_ADDER_2       U_ADDER_0     13       S3         1
+                U_ADDR_MUX_2  4        D0         1
+
+U_ADDER_3       U_ADDER_0     10       S4         1
+                U_ADDR_MUX_3  4        D0         1
+
+U_ADDER_4       U_ADDER_1     4        S1         1
+                U_ADDR_MUX_4  4        D0         1
+
+U_ADDER_5       U_ADDER_1     1        S2         1
+                U_ADDR_MUX_5  4        D0         1
+
+U_ADDER_6       U_ADDER_1     13       S3         1
+                U_ADDR_MUX_6  4        D0         1
+
+U_ADDER_7       U_ADDER_1     10       S4         1
+                U_ADDR_MUX_7  4        D0         1
+
+U_ADDER_8       U_ADDER_2     4        S1         1
+                U_ADDR_MUX_8  4        D0         1
+
+U_ADDER_9       U_ADDER_2     1        S2         1
+                U_ADDR_MUX_9  4        D0         1
+
+U_ADDER_10      U_ADDER_2     13       S3         1
+                U_ADDR_MUX_10 4        D0         1
+
+U_ADDER_11      U_ADDER_2     10       S4         1
+                U_ADDR_MUX_11 4        D0         1
+
+U_ADDER_12      U_ADDER_3     4        S1         1
+                U_ADDR_MUX_12 4        D0         1
+
+U_ADDER_13      U_ADDER_3     1        S2         1
+                U_ADDR_MUX_13 4        D0         1
+
+U_ADDER_14      U_ADDER_3     13       S3         1
+                U_ADDR_MUX_14 4        D0         1
+
+U_ADDER_15      U_ADDER_3     10       S4         1
+                U_ADDR_MUX_15 4        D0         1
+
+U_CF            COND_MUX_0    11       2C1        1
+                U_FLAGS       5        Q2         1
+                U_FLAGS_MUX_1 6        1C0        1
+
+U_CF_IN_SRC_0   U_FLAGS_MUX_1 14       A          1
+
+U_CF_IN_SRC_1   U_FLAGS_MUX_1 2        B          1
+
+U_DMA_0         RN5           1        1          1
+                U_ADDR_MUX_0  15       D4         1
+                U_DMA_SW      8        8          1
+
+U_DMA_1         RN5           2        1          1
+                U_ADDR_MUX_1  15       D4         1
+                U_DMA_SW      7        7          1
+
+U_DMA_2         RN5           3        1          1
+                U_ADDR_MUX_2  15       D4         1
+                U_DMA_SW      6        6          1
+
+U_DMA_3         RN5           4        1          1
+                U_ADDR_MUX_3  15       D4         1
+                U_DMA_SW      5        5          1
+
+U_DMA_4         RN5           5        1          1
+                U_ADDR_MUX_4  15       D4         1
+                U_DMA_SW      4        4          1
+
+U_DMA_5         RN5           6        1          1
+                U_ADDR_MUX_5  15       D4         1
+                U_DMA_SW      3        3          1
+
+U_DMA_6         RN5           7        1          1
+                U_ADDR_MUX_6  15       D4         1
+                U_DMA_SW      2        2          1
+
+U_DMA_7         RN5           8        1          1
+                U_ADDR_MUX_7  15       D4         1
+                U_DMA_SW      1        1          1
+
+U_FETCH_0       RN3           1        1          1
+                U_ADDR_MUX_0  2        D2         1
+                U_FETCH_SW    8        8          1
+
+U_FETCH_1       RN3           2        1          1
+                U_ADDR_MUX_1  2        D2         1
+                U_FETCH_SW    7        7          1
+
+U_FETCH_2       RN3           3        1          1
+                U_ADDR_MUX_2  2        D2         1
+                U_FETCH_SW    6        6          1
+
+U_FETCH_3       RN3           4        1          1
+                U_ADDR_MUX_3  2        D2         1
+                U_FETCH_SW    5        5          1
+
+U_FETCH_4       RN3           5        1          1
+                U_ADDR_MUX_4  2        D2         1
+                U_FETCH_SW    4        4          1
+
+U_FETCH_5       RN3           6        1          1
+                U_ADDR_MUX_5  2        D2         1
+                U_FETCH_SW    3        3          1
+
+U_FETCH_6       RN3           7        1          1
+                U_ADDR_MUX_6  2        D2         1
+                U_FETCH_SW    2        2          1
+
+U_FETCH_7       RN3           8        1          1
+                U_ADDR_MUX_7  2        D2         1
+                U_FETCH_SW    1        1          1
+
+U_INT_0         RN4           1        1          1
+                U_ADDR_MUX_0  14       D5         1
+                U_INT_SW      8        8          1
+
+U_INT_1         RN4           2        1          1
+                U_ADDR_MUX_1  14       D5         1
+                U_INT_SW      7        7          1
+
+U_INT_2         RN4           3        1          1
+                U_ADDR_MUX_2  14       D5         1
+                U_INT_SW      6        6          1
+
+U_INT_3         RN4           4        1          1
+                U_ADDR_MUX_3  14       D5         1
+                U_INT_SW      5        5          1
+
+U_INT_4         RN4           5        1          1
+                U_ADDR_MUX_4  14       D5         1
+                U_INT_SW      4        4          1
+
+U_INT_5         RN4           6        1          1
+                U_ADDR_MUX_5  14       D5         1
+                U_INT_SW      3        3          1
+
+U_INT_6         RN4           7        1          1
+                U_ADDR_MUX_6  14       D5         1
+                U_INT_SW      2        2          1
+
+U_INT_7         RN4           8        1          1
+                U_ADDR_MUX_7  14       D5         1
+                U_INT_SW      1        1          1
+
+U_OF            COND_MUX_1    11       2C1        1
+                U_FLAGS       9        Q4         1
+                U_FLAGS_MUX_3 2        1A         1
+
+U_OFFSET0       U_ADDER_MUX_0 3        1B         1
+
+U_OFFSET1       U_ADDER_MUX_0 6        2B         1
+
+U_OFFSET2       U_ADDER_MUX_0 10       3B         1
+
+U_OFFSET3       U_ADDER_MUX_0 13       4B         1
+
+U_OFFSET4       U_ADDER_MUX_1 3        1B         1
+
+U_OFFSET5       U_ADDER_MUX_1 6        2B         1
+
+U_OFFSET6       U_ADDER_MUX_1 10       3B         1
+                U_ADDER_MUX_1 13       4B         1
+                U_ADDER_MUX_2 10       3B         1
+                U_ADDER_MUX_2 13       4B         1
+                U_ADDER_MUX_2 3        1B         1
+                U_ADDER_MUX_2 6        2B         1
+                U_ADDER_MUX_3 10       3B         1
+                U_ADDER_MUX_3 13       4B         1
+                U_ADDER_MUX_3 3        1B         1
+                U_ADDER_MUX_3 6        2B         1
+
+U_OF_IN_SRC     U_FLAGS_MUX_3 1        !A!/B      1
+
+U_SF            COND_MUX_1    5        1C1        1
+                U_FLAGS       6        Q3         1
+                U_FLAGS_MUX_2 2        1A         1
+
+U_SF_IN_SRC     U_FLAGS_MUX_2 1        !A!/B      1
+
+U_TRAP_0        RN2           1        1          1
+                U_ADDR_MUX_0  1        D3         1
+                U_TRAP_SW     8        8          1
+
+U_TRAP_1        RN2           2        1          1
+                U_ADDR_MUX_1  1        D3         1
+                U_TRAP_SW     7        7          1
+
+U_TRAP_2        RN2           3        1          1
+                U_ADDR_MUX_2  1        D3         1
+                U_TRAP_SW     6        6          1
+
+U_TRAP_3        RN2           4        1          1
+                U_ADDR_MUX_3  1        D3         1
+                U_TRAP_SW     5        5          1
+
+U_TRAP_4        RN2           5        1          1
+                U_ADDR_MUX_4  1        D3         1
+                U_TRAP_SW     4        4          1
+
+U_TRAP_5        RN2           6        1          1
+                U_ADDR_MUX_5  1        D3         1
+                U_TRAP_SW     3        3          1
+
+U_TRAP_6        RN2           7        1          1
+                U_ADDR_MUX_6  1        D3         1
+                U_TRAP_SW     2        2          1
+
+U_TRAP_7        RN2           8        1          1
+                U_ADDR_MUX_7  1        D3         1
+                U_TRAP_SW     1        1          1
+
+U_ZF            2AND_0        2        I1         1
+                2AND_1        1        I0         1
+                COND_MUX_0    5        1C1        1
+                U_FLAGS       2        Q1         1
+                U_FLAGS_MUX_0 6        1C0        1
+
+U_ZF_IN_SRC_0   U_FLAGS_MUX_0 14       A          1
+
+U_ZF_IN_SRC_1   U_FLAGS_MUX_0 2        B          1
+
+VCC             2AND_0        14       VCC        * none *
+                2AND_1        14       VCC        * none *
+                2OR_0         14       VCC        * none *
+                2OR_1         14       VCC        * none *
+                2XOR_0        14       VCC        * none *
+                3AND_0        14       VCC        * none *
+                4NAND_0       14       VCC        * none *
+                COND_MUX_0    16       VCC        * none *
+                COND_MUX_1    16       VCC        * none *
+                COND_MUX_2    16       VCC        * none *
+                IR_H          20       VCC        * none *
+                IR_L          20       VCC        * none *
+                NOT_0         14       VCC        * none *
+                NOT_1         14       VCC        * none *
+                U_ADDER_0     16       VCC        * none *
+                U_ADDER_1     16       VCC        * none *
+                U_ADDER_2     16       VCC        * none *
+                U_ADDER_3     16       VCC        * none *
+                U_ADDER_MUX_0 16       VCC        * none *
+                U_ADDER_MUX_0 2        1A         1
+                U_ADDER_MUX_1 16       VCC        * none *
+                U_ADDER_MUX_2 16       VCC        * none *
+                U_ADDER_MUX_3 16       VCC        * none *
+                U_ADDR_H      20       VCC        * none *
+                U_ADDR_L      20       VCC        * none *
+                U_ADDR_MUX_0  16       VCC        * none *
+                U_ADDR_MUX_1  16       VCC        * none *
+                U_ADDR_MUX_10 16       VCC        * none *
+                U_ADDR_MUX_11 16       VCC        * none *
+                U_ADDR_MUX_12 16       VCC        * none *
+                U_ADDR_MUX_13 16       VCC        * none *
+                U_ADDR_MUX_14 16       VCC        * none *
+                U_ADDR_MUX_15 16       VCC        * none *
+                U_ADDR_MUX_2  16       VCC        * none *
+                U_ADDR_MUX_3  16       VCC        * none *
+                U_ADDR_MUX_4  16       VCC        * none *
+                U_ADDR_MUX_5  16       VCC        * none *
+                U_ADDR_MUX_6  16       VCC        * none *
+                U_ADDR_MUX_7  16       VCC        * none *
+                U_ADDR_MUX_8  16       VCC        * none *
+                U_ADDR_MUX_9  16       VCC        * none *
+                U_DMA_SW      10       10         1
+                U_DMA_SW      11       11         1
+                U_DMA_SW      12       12         1
+                U_DMA_SW      13       13         1
+                U_DMA_SW      14       14         1
+                U_DMA_SW      15       15         1
+                U_DMA_SW      16       16         1
+                U_DMA_SW      9        9          1
+                U_FETCH_SW    10       10         1
+                U_FETCH_SW    11       11         1
+                U_FETCH_SW    12       12         1
+                U_FETCH_SW    13       13         1
+                U_FETCH_SW    14       14         1
+                U_FETCH_SW    15       15         1
+                U_FETCH_SW    16       16         1
+                U_FETCH_SW    9        9          1
+                U_FLAGS       1        CLR        1
+                U_FLAGS       20       VCC        * none *
+                U_FLAGS_MUX_0 16       VCC        * none *
+                U_FLAGS_MUX_1 16       VCC        * none *
+                U_FLAGS_MUX_2 16       VCC        * none *
+                U_FLAGS_MUX_3 16       VCC        * none *
+                U_INT_SW      10       10         1
+                U_INT_SW      11       11         1
+                U_INT_SW      12       12         1
+                U_INT_SW      13       13         1
+                U_INT_SW      14       14         1
+                U_INT_SW      15       15         1
+                U_INT_SW      16       16         1
+                U_INT_SW      9        9          1
+                U_TRAP_SW     10       10         1
+                U_TRAP_SW     11       11         1
+                U_TRAP_SW     12       12         1
+                U_TRAP_SW     13       13         1
+                U_TRAP_SW     14       14         1
+                U_TRAP_SW     15       15         1
+                U_TRAP_SW     16       16         1
+                U_TRAP_SW     9        9          1
+
+ZF              COND_MUX_0    6        1C0        1
+
+ZF_FROM_ALU     2AND_0        1        I0         1
+                2AND_1        2        I1         1
+                COND_MUX_0    4        1C2        1
+                U_FLAGS_MUX_0 5        1C1        1
+

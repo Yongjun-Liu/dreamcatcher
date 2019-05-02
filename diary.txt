@@ -1,0 +1,64 @@
+10/Feb/2018
+
+this is a brain dump of interrupts and traps. 
+i have 8 interrupt lines. these lines come from the outside world into the cpu. 
+they feed into a d flop each, and when they go high, the flip flop, which has its D-input tied high,
+will go high, indicating that that interrupt has been raised.
+these inputs, go into the inputs of a 8bit priority encoder, the 74hc148, and the encoder generates a 3bit code,
+indicating which interrupt should be dealt with first. 
+
+this encoder chooses the interrupt with the highest priority and generates the code for that.
+the highest priority int is what is called the TRAP interrupt. this is a non maskable interrupt that will
+always be serviced, even if another interrupt is being processed.
+
+all my ints are maskable, indivudually and cllectively. there is an int enable signal, which
+disables all ints except the trap.
+
+so far so good.
+
+now we need to decide what happens when a trap happens. should we block any other traps from happening?
+of course normal ints will be blocked. but what about traps?
+
+what if a trap happens, and then another one happens right before the frist one is completed ?
+should we block it from, happening? I think so. Once the first trap happens, we need to wait till its
+completed in order to execute a second possible trap.
+
+so firstly, when an interrupt happens, the microcode will check if this is a trap.
+it does this by checking if the code generated is 000. if so, then it's a trap.
+
+if it is a trap, then we need to first clear the trap flip flop, so that the trap signal isn't
+permanently high. we then save the flags register, CS, and PC in the stack. we then disable interrupts.
+now this are the maskable interrupts, not the trap. these cannot happen during a trap, so we need to disable them.
+
+we then disable the trap, separably. it has its own "disable" signal. then we do a simple calculation to get
+the interrupt vector for that trap, which will probably be the lowest address in RAM. basically for all interrupts,
+the output from the encoder will be a byte, where the first 3 positions are zeros, the next 3 are the code, and the next 2 are 
+zeroes again. this byte is used to form the address that we should jump to execute the interrupt in machine code.
+
+of course the address needs to be 16 bits, so the highest byte will be zero. this could change in the future if we
+need to have other data in RAM at the bottom, and so we would need to add an offset to that.
+
+OK, so with traps now disabled, we cpu jumps to the address required and starts executing the trap.
+maskable interrupts will not happen, nor will traps during this execution. of course then, when we are done
+processing this trap, we need to make traps abled again. there are two issues to solve here. firstly, because we disabled
+maskable interrupts, it could be that they were either enabled  or disabled before the trap happened. maybe the programmer
+had disabled or enabled them. so if we disabled them for the trap, we need to restore their enable state before leaving. that
+is the first issue. the second issue is that we need to reenable traps again. oki doki.
+
+
+we can solve this problem simply by creating a new signal: TRAP_ENABLE. This signal will dictate whether traps or any interrupts
+at all can happen. We simply make it 0 when a trap happen, and make it "1" again upon executing the IRET. This signal is AND'ed
+directly with the INT_LENDING signal, which comes from the priority encoder. This means that no matter whether interrupts are
+enabled or not, it's impossible for any further ints or traps to happen if the TRAP_ENABLE signal is low. this is a simple and very
+effective solution to this problem.
+
+so in summary: a trap happens, the TRAP_ENABLE signal is made low, which means no traps or ints can happen during this time. then,
+upon executing IRET, the signal is back to "1" and all is back to normal. 
+
+When the computer is reset, the TRAP_ENABLE signal starts as being HIGH, and we do this by using an inverter right at the control output.
+we need this signal to start as high because we need traps to be active right from the start.
+
+
+
+out interrupt flag is in the auxiliary flags register. A register that has its input from the Z bus, and outputs into the X bus.
+

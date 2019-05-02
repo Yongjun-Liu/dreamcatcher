@@ -1,0 +1,21 @@
+The HALT condition does (at least on retro CPUs) not consume considerably less power than normal execution does.
+
+One very obvious use case is synchronizing program flow with external (hardware) events. The main use case of the HALT instruction is thus "wait for an interrupt".
+
+A prominent example outside embedded systems is synchronizing video output with the beam flyback phase on a CRT to prevent flicker. Before actually writing new information to the frame buffer, the CPU is put into the halt state. A vertical blank interrupt triggers the CPU to go on writing (leave HALT), making sure the write occurs in a phase where no screen output takes place.
+
+Other uses might be waiting for interrupts from other I/O like, for example, disk controllers. The Sinclair microdrive system used HALT to wait for the next sector on the drive come by.
+
+Other uses of HALT can be multiprocessor systems, or communication with a second CPU: Send off a command to your second processor, put the first one in HALT to wait until the second CPU sends an answer and signals this with an interrupt. Then put the other one to a HALT state. The Commodore C128 used this with its Z80 co-processor. For this to work properly, another important trait of the HALT (or the-like) instruction is that it signals i don't need the bus at the moment other than for refresh - The HALT signal can, be (and is, in many architectures) used to isolate the CPU completely from the bus, if needed during that state.
+
+On Motorola CPUs, the HALT instruction was called STOP and took an argument: A value written to the status register (which holds, among others, the Interrupt mask) - So you could specify for which interrupt to wait (Or, rather, the minimum IPL (Interrupt Priority Level) that has to occur until execution goes on).
+
+As you can see from the above examples, HALT is, even if it is rarely used in application programs, an important instruction for OS writers. The exact program flow may differ a bit between CPUs, but the main flow would be:
+
+Initiate some external process going on (like sending a command to the disk controller)
+Put the CPU in HALT state, also releasing the bus.
+Hardware outside the CPU can access the bus, use memory,...
+Once done, the external hardware triggers an interrupt
+CPU leaves HALT state
+CPU executes the ISR (if any)
+CPU continues with the next instruction after the HALT and can access the external hardware for the results

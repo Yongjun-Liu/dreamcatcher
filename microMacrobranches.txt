@@ -1,0 +1,40 @@
+micro and macro branches:
+
+we can have two types of branches. one is a micro-branch(for microcode jumps) 
+and another a macro-branch(for instructions, like JZ, JL, etc).
+
+To do this, we have to have a further type of u-instruction : u_branch.
+
+So we have two types: u_branch and M_branch.
+
+In the u_branch type, the ALU does an operation, and the flags come from the alu
+and go directly to the u-code sequencer via a multiplexer which selects where the flags come from
+into the sequencer.
+
+We also have extra control word bits, so that we can have for example 5 bits of offset in case
+the final condition is true and 5 bits in case it is false.
+
+So the flags come from the ALU directly, go to the logic that computes conditions such as zero, carry, not carry,
+less than, grater then, etc, and if the u-instruction type is a u_branch, then if the condition is true,
+then the current u_address is offset by a positive offset, and if it is false, by a negative, or vice versa.
+
+This allows the sequencer to take internal decisions inside a CPU_instruction, so that instructions like
+SHL, SHR, MUL, DIV can be performed inside the sequencer.
+
+For this we need a multiplexer, to channel where the flags come from, whether from the flags register, or directly from the
+ALU. This is needed because we also have CPU jump instructions, which need the flags coming from the flags register instead,
+in order for the condition and therefore jump to be taken.
+
+The multiplexer is controlled by the type of branch itself, that is, the u_instruction bits that dictate what type
+of micro-instruction is executing, is fed to the plexer (via some glue logic) so that for example if the type is
+a u_branch, then the plexer selects the flags coming directly from the ALU, and if the type is a M_branch, then
+the plexer selects from the flags register.
+
+
+Another possibility is to have another flip flop, right at the alu outpout, which is clocked at
+every pos clock edge, so that no control bit is needed for it, and this flop takes the alu flag bits
+and records it. So instead of taking the bits from the ALU, the bits are taken from this flop and
+fed into the microcode condition circuit. So to do a sequencer jump, whatever arithmetical operations are 
+performed on one clock edge, and then at the next edge, we check the condition by taking the bits from
+this flop instead of the ALU.
+
