@@ -1,0 +1,1171 @@
+* 
+  Microcode for all ROMS
+  Least significant bits on the right
+  Types of micro-instruction:         seq	 = 00 (next is sequential)
+						branch = 01 (next depends on branch conditions)
+					   pre-fetch = 10 (next is fetch)
+					  post-fetch = 11 (next given by IR)
+
+CarryInMux:	00 :   0		used for SUB
+		01 :   1		used for ADD
+		10 :  CF		used for SBB
+		11 : ~CF		used for ADC
+
+
+CONTROL BITS
+	HIGH-------------------------------------------------------------------------------LOW
+
+ROM1: ALU_Op2, ALU_Op1, ALU_Op0, WR, RD, branch_code, type1, type0
+ROM2: PC_Wrt, CarryIn_Mux1, CarryIn_Mux0, CarryOut_Invert, ZF_Wrt, CF_Wrt, ALU_Mode, ALU_Op3
+ROM3: MAR_Wrt, MDRIn_Mux, MDR_DB_Out, MDR_Y_Out, MDR_X_Out, MDR_Wrt, IR_Wrt, PC_Out
+ROM4:	B_Out, B_Wrt, A_Out, A_Wrt, IMM_Out, IMM_Val, TDR_Out, TDR_Wrt
+
+*
+
+* FETCH *
+*	ROM 1     ROM 2     ROM 3     ROM 4     *
+>>	00000000, 00000000, 00000000, 00000000, * During this cycle, nothing is output onto the bus, in order no to create shorts. 
+								Because the previous u-instructions might have been outputting data onto the buses and if PC outputs right after they might collide. *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, IMMVal=0, IMMOut, ALU=1001, ALUMode=0, CarryInMux=01, MAR_Wrt, type=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 00000010, 00000000, * RD, IR_Wrt, type=seq (00) *
+	00100000, 10100001, 00000001, 00001100, * PC_Out, PC_Wrt, ALU=1001, ALUMode=0, CarryInMux=01, IMM_Out, IMMVal=1, type= +1(00)*
+	00000011, 00000000, 00000000, 00000000; * Delay to avoid bus collision between PC and next instruction on X bus. post-fetch(11)* 	
+
+* SWP A, B *
+>>	00100000, 00100001, 00000000, 00101001, * TDR_Wrt, A_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, type=00(seq) *
+	00100000, 00100001, 00000000, 10011000, * A_Wrt, B_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, type=00(seq) *
+	01000010, 00000011, 00000000, 01100010; * B_Wrt, TDR_Out, (A_Out), ALU_Op=1010, ALU_Mode=1, type=10(pre-fetch) *
+
+* MOV A, B *
+>>	00100010, 00100001, 00000000, 10011000; * BOut, AWrt, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux=01, type=pre-fetch(10) *
+
+* MOV A, IMM8 *                                                                                                                 
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux=01, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and MDR on X bus. * 
+	00100010, 00100001, 00001000, 00011000; * A_Wrt, MDR_X_Out, IMM_Out=1, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, type=pre-fetch(10)*
+
+* MOV A, [AD8] *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM_Val=0, CarryInMux=01, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and MDR on X bus. * 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, next=00*
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 00011000; * A_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, type=pre-fetch(10) *
+
+* MOV [AD8], A *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD, ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and MDR on X bus. * 
+	00100000, 00100001, 00000100, 00101000, * A_Out, MDRIn_Mux=0, MDR_Wrt, IMM_Out, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=10(pre-fetch) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *	
+
+* MOV A, [B + SIGNED8] - 2 BYTE INSTRUCTION *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD, ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10010000, 10000000, * B_Out, MDR_Y_Out, MAR_Wrt, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 00011000; * A_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, type=pre-fetch(10) *	
+	
+	
+* MOV [B + SIGNED8], A - 2 BYTE INSTRUCTION *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD, ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10010000, 10000000, * B_Out, MDR_Y_Out, MAR_Wrt, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 00000100, 00101000, * A_Out, MDRIn_Mux=0, MDR_Wrt, IMM_Out, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=10(pre-fetch) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+* MOV A, [BP + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add TDR (signed8) and MDR; save in MAR *		 
+	00100000, 00100001, 10001000, 00000010, * MAR_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Read & mov data to A *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 00011000; * A_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+
+* MOV A, [BP + B + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add B *
+	00100000, 00100001, 00001100, 10000000, * MDR_Wrt, B_Out, MDR_X_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Add TDR (signed8) and MDR; save in MAR *		 
+	00100000, 00100001, 10001000, 00000010, * MAR_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Read & mov data to A *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 00011000; * A_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+
+* MOV A, [BP + A + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add A *
+	00100000, 00100001, 00001100, 00100000, * MDR_Wrt, A_Out, MDR_X_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Add TDR (signed8) and MDR; save in MAR *		 
+	00100000, 00100001, 10001000, 00000010, * MAR_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Read & mov data to A *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 00011000; * A_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+
+
+* MOV [BP + SIGNED8], A *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+
+	* Add TDR (signed8) and MDR; save in MAR *		 
+	00100000, 00100001, 10001000, 00000010, * MAR_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* write A *
+	00100000, 00100001, 00000100, 00101000, * MDR_Wrt, MDR_In_Mux=0(Z), A_Out, IMM_Out, IMM_Val, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, type=00(seq) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+* MOV [BP + B + SIGNED8], A *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add B *
+	00100000, 00100001, 00001100, 10000000, * MDR_Wrt, B_Out, MDR_X_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Add TDR (signed8) and MDR; save in MAR *		 
+	00100000, 00100001, 10001000, 00000010, * MAR_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* write A *
+	00100000, 00100001, 00000100, 00101000, * MDR_Wrt, MDR_In_Mux=0(Z), A_Out, IMM_Out, IMM_Val, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, type=00(seq) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+
+*
+
+1 	ALU_Op2, ALU_Op1, ALU_Op0, WR, RD, branch_code, type1, type0
+2 	PC_Wrt, CarryIn_Mux1, CarryIn_Mux0, CarryOut_Invert, ZF_Wrt, CF_Wrt, ALU_Mode, ALU_Op3
+3 	MAR_Wrt, MDRIn_Mux, MDR_DB_Out, MDR_Y_Out, MDR_X_Out, MDR_Wrt, IR_Wrt, PC_Out
+4	B_Out, B_Wrt, A_Out, A_Wrt, IMM_Out, IMM_Val, TDR_Out, TDR_Wrt
+
+*
+
+* MOV B, A *
+>>	00100010, 00100001, 00000000, 01101000; * AOut, BWrt, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, type=pre-fetch(10) *
+
+* MOV B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 ** Send PC to MAR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *		    
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 ** read byte from mem and write to mdr *			    
+	00100000, 10100001, 00000001, 00001100, * PC_Out, PC_Wrt, ALUOp=1001, ALUMode=0, CarryInMux=01, IMM_Out, IMMVal=1, next=00 ** increase PC by 1. *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and MDR on X bus. * 
+	00100010, 00100001, 00001000, 01001000; * B_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, type=pre-fetch(10)** save result to B: *
+							    
+* MOV B, [AD8] *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and MDR on X bus. * 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, next=00*
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 01001000; * B_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, type=pre-fetch(10) *
+
+* MOV [AD8], B *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and MDR on X bus. * 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between B and MDR on X bus. * 
+	00100000, 00100001, 00000100, 10001000, * B_Out, MDRIn_Mux=0, MDR_Wrt, IMM_Out, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=10(pre-fetch) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+* MOV B, [B] *
+>>	00100000, 00100001, 10000000, 10001000, * B_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, type=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 01001000; * B_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, type=pre-fetch(10) *
+
+* MOV B, [BP + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add TDR (signed8) and MDR; save in MAR *		 
+	00100000, 00100001, 10001000, 00000010, * MAR_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Read & mov data to B *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 00100001, 00001000, 01001000; * B_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+
+* MOV [BP + SIGNED8], B *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add TDR (signed8) and MDR; save in MAR *		 
+	00100000, 00100001, 10001000, 00000010, * MAR_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* write B *
+	00100000, 00100001, 00000100, 10001000, * MDR_Wrt, MDR_In_Mux=0(Z), B_Out, IMM_Out, IMM_Val, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, type=00(seq) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+
+* LEA A, [BP + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add TDR (signed8) and MDR; save in A *		 
+	00100010, 00100001, 00001000, 00010010; * A_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+* LEA A, [BP + B + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add B *
+	00100000, 00100001, 00001100, 10000000, * MDR_Wrt, B_Out, MDR_X_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Add TDR (signed8) and MDR; save in A *		 
+	00100010, 00100001, 00001000, 00010010; * A_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+* LEA A, [BP + A + SIGNED8] *
+>>	 * get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add A *
+	00100000, 00100001, 00001100, 00100000, * MDR_Wrt, A_Out, MDR_X_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Add TDR (signed8) and MDR; save in A *		 
+	00100010, 00100001, 00001000, 00010010; * A_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+* LEA B, [BP + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add TDR (signed8) and MDR; save in B *		 
+	00100010, 00100001, 00001000, 01000010; * B_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+* LEA B, [BP + B + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add B *
+	00100000, 00100001, 00001100, 10000000, * MDR_Wrt, B_Out, MDR_X_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Add TDR (signed8) and MDR; save in B *		 
+	00100010, 00100001, 00001000, 01000010; * B_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+* LEA B, [BP + A + SIGNED8] *
+>>	* get SIGNED8 and save into TDR; inc PC *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00100000, 00100001, 00001000, 00001001, * MDR_X_Out, TDR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=00(seq) *
+
+	* loading 0x03 into MAR and reading &BP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 00001100, 00001100, * MDR_Wrt, MDR_In_Mux=0(Z), MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	* &BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &BP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* BP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+		
+	* Add A *
+	00100000, 00100001, 00001100, 00100000, * MDR_Wrt, A_Out, MDR_X_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+	* Add TDR (signed8) and MDR; save in B *		 
+	00100010, 00100001, 00001000, 01000010; * B_Wrt, MDR_X_Out, TDR_Out, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+
+*
+
+1 	ALU_Op2, ALU_Op1, ALU_Op0, WR, RD, branch_code, type1, type0
+2 	PC_Wrt, CarryIn_Mux1, CarryIn_Mux0, CarryOut_Invert, ZF_Wrt, CF_Wrt, ALU_Mode, ALU_Op3
+3 	MAR_Wrt, MDRIn_Mux, MDR_DB_Out, MDR_Y_Out, MDR_X_Out, MDR_Wrt, IR_Wrt, PC_Out
+4	B_Out, B_Wrt, A_Out, A_Wrt, IMM_Out, IMM_Val, TDR_Out, TDR_Wrt
+
+*
+
+* INC A *
+>>	00100010, 00111101, 00000000, 00111100; * AOut, AWrt, IMM_Out, IMM_Val=1, ALUMode=0, ALUOp=1001, CarryInMux=01, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+	
+* INC B *
+>>	00100010, 00111101, 00000000, 11001100; * BOut, BWrt, IMM_Out, IMM_Val=1, ALUMode=0, ALUOp=1001, CarryInMux=01, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* INC [AD8] *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM_Val=0, CarryInMux=01, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, next=00*
+	* read *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	* inc MDR *
+	00100000, 00111101, 00001100, 00001100, * MDR_Wrt, MDR_X_Out, IMM_Out, MDR_In_Mux=0(Z), IMM(1), ALUOp=1001, ALUMode=0, CarryInMux=01, CarryOutInvert=1, ZF_Wrt, CF_Wrt, type=seq(00) *
+	* write *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=10(pre-fetch) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+* DEC A *
+>>	11000010, 00001100, 00000000, 00111100; * AOut, AWrt, IMM_Out, IMM_Val=1, ALUMode=0, ALUOp=0110, CarryInMux=00, CarryOutInvert=0, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* DEC B *
+>>	11000010, 00001100, 00000000, 11001100; * BOut, BWrt, IMM_Out, IMM_Val=1, ALUMode=0, ALUOp=0110, CarryInMux=00, CarryOutInvert=0, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* DEC [AD8] *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM_Val=0, CarryInMux=01, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, next=00*
+	* read *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	* inc MDR *
+	11000000, 00001100, 00001100, 00001100, * MDR_Wrt, MDR_X_Out, IMM_Out, MDR_In_Mux=0(Z), IMM(1), ALUOp=0110, ALUMode=0, CarryInMux=00, CarryOutInvert=0, ZF_Wrt, CF_Wrt, type=seq(00) *
+	* write *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=10(pre-fetch) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+* ADD A, A *
+>>	00100000, 00100001, 00000000, 00101001, * TDRWrt, A_Out, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, type=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 00111101, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADD A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 00111101, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADD A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	00100010, 00111101, 00010000, 00110000; * A_Out, A_Wrt, MDR_Y_Out, ALUOp=1001, ALUMode=0, CarryInMux=01, CarryOutInvert=1, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+* ADD A, [AD8] *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, next=00*
+	* read *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	* inc MDR *
+	00100000, 00111101, 00010000, 00110000, * A_Wrt, MDR_Y_Out, A_Out, ALUOp=1001, ALUMode=0, CarryInMux=01, CarryOutInvert=1, ZF_Wrt, CF_Wrt, type=seq(00) *
+	* write *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=10(pre-fetch) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+* ADD B, B *
+>>	00100000, 00100001, 00000000, 10001001, * B_Out, TDRWrt, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 00111101, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADD B, A *
+>>	00100000, 00100001, 00000000, 00101001, * AOut, TDRWrt, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 00111101, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADD B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	00100010, 00111101, 00010000, 11000000; * B_Out, B_Wrt, MDR_Y_Out, ALUOp=1001, ALUMode=0, CarryInMux=01, CarryOutInvert=1, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+* ADD B, [AD8] *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux=01, next=00*
+	* read *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	* inc MDR *
+	00100000, 00111101, 00010000, 11000000, * B_Wrt, MDR_Y_Out, B_Out, ALUOp=1001, ALUMode=0, CarryInMux=01, CarryOutInvert=1, ZF_Wrt, CF_Wrt, type=seq(00) *
+	* write *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=10(pre-fetch) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+
+* ADC A, A *
+>>	00100000, 00100001, 00000000, 00101001, * A_Out, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 01111101, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux=11, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADC A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 01111101, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux=11, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADC A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	00100010, 01111101, 00010000, 00110000; * A_Out, A_Wrt, MDR_Y_Out, ALUOp=1001, ALUMode=0, CarryInMux=11, CarryOutInvert=1, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+* ADC B, B *
+>>	00100000, 00100001, 00000000, 10001001, * B_Out, TDRWrt, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 01111101, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux=11, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADC B, A *
+>>	00100000, 00100001, 00000000, 00101001, * AOut, TDRWrt, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	00100010, 01111101, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=0, ALUOp=1001, CarryInMux=11, CarryOutInvert=1, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* ADC B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	00100010, 01111101, 00010000, 11000000; * B_Out, B_Wrt, MDR_Y_Out, ALUOp=1001, ALUMode=0, CarryInMux=11, CarryOutInvert=1, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+
+
+* SUB A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 00001100, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=0, ALUOp=0110, CarryInMux1=0, CarryInMux0=0, CarryOutInvert=0, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* SUB A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	11000010, 00001100, 00010000, 00110000; * A_Out, A_Wrt, MDR_Y_Out, ALUOp=0110, ALUMode=0, CarryInMux=00, CarryOutInvert=0, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+* SUB B, A *
+>>	00100000, 00100001, 00000000, 00001001, * AOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 00001100, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=0, ALUOp=0110, CarryInMux1=0, CarryInMux0=0, CarryOutInvert=0, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* SUB B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	11000010, 00001100, 00010000, 11000000; * B_Out, B_Wrt, MDR_Y_Out, ALUOp=0110, ALUMode=0, CarryInMux=00, CarryOutInvert=0, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+
+
+* SBB A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 01001100, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=0, ALUOp=0110, CarryInMux=10, CarryOutInvert=0, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* SBB A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	11000010, 01001100, 00010000, 00110000; * A_Out, A_Wrt, MDR_Y_Out, ALUOp=0110, ALUMode=0, CarryInMux=10, CarryOutInvert=0, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+* SBB B, A *
+>>	00100000, 00100001, 00000000, 00001001, * AOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 01001100, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=0, ALUOp=0110, CarryInMux=10, CarryOutInvert=0, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* SBB B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	11000010, 01001100, 00010000, 11000000; * B_Out, B_Wrt, MDR_Y_Out, ALUOp=0110, ALUMode=0, CarryInMux=10, CarryOutInvert=0, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+*
+1 	ALU_Op2, ALU_Op1, ALU_Op0, WR, RD, branch_code, type1, type0
+2 	PC_Wrt, CarryIn_Mux1, CarryIn_Mux0, CarryOut_Invert, ZF_Wrt, CF_Wrt, ALU_Mode, ALU_Op3
+3 	MAR_Wrt, MDRIn_Mux, MDR_DB_Out, MDR_Y_Out, MDR_X_Out, MDR_Wrt, IR_Wrt, PC_Out
+4	B_Out, B_Wrt, A_Out, A_Wrt, IMM_Out, IMM_Val, TDR_Out, TDR_Wrt
+*
+
+* TEST A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	01100010, 00001011, 00000000, 00100010; * AOut, TDROut, ALUMode=1, ALUOp=1011, ZFWrt, type=pre-fetch(10) *
+
+* TEST A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	01100010, 00001011, 00010000, 00100000; * A_Out, MDR_Y_Out, ALUOp=1011, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+* TEST B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALUOp=1001, ALUMode=0, CarryInMux=01, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	01100010, 00001011, 00010000, 10000000; * B_Out, MDR_Y_Out, ALUOp=1011, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+* AND A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	01100010, 00001011, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=1, ALUOp=1011, ZFWrt, type=pre-fetch(10) *
+
+* AND A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	01100010, 00001011, 00010000, 00110000; * A_Out, A_Wrt, MDR_Y_Out, ALUOp=1011, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+* AND B, A *
+>>	00100000, 00100001, 00000000, 10001001, * A_Out, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	01100010, 00001011, 00000000, 11000010; * B_Out, BWrt, TDROut, ALUMode=1, ALUOp=1011, ZFWrt, type=pre-fetch(10) *
+
+* AND B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALUOp=1001, ALUMode=0, CarryInMux=01, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	01100010, 00001011, 00010000, 11000000; * B_Out, B_Wrt, MDR_Y_Out, ALUOp=1011, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+* OR A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 00001011, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=1, ALUOp=1110, ZFWrt, type=pre-fetch(10) *
+
+* OR A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	11000010, 00001011, 00010000, 00110000; * A_Out, A_Wrt, MDR_Y_Out, ALUOp=1110, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+* OR B, A *
+>>	00100000, 00100001, 00000000, 10001001, * AOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 00001011, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=1, ALUOp=1110, ZFWrt, type=pre-fetch(10) *
+
+* OR B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALUOp=1001, ALUMode=0, CarryInMux=01, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	11000010, 00001011, 00010000, 11000000; * B_Out, B_Wrt, MDR_Y_Out, ALUOp=1110, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+
+* XOR A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 00001010, 00000000, 00110010; * AOut, AWrt, TDROut, ALUMode=1, ALUOp=0110, ZFWrt, type=pre-fetch(10) *
+
+* XOR A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	11000010, 00001010, 00010000, 00110000; * A_Out, A_Wrt, MDR_Y_Out, ALUOp=0110, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+* XOR B, A *
+>>	00100000, 00100001, 00000000, 10001001, * AOut, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, TDRWrt, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 00001010, 00000000, 11000010; * BOut, BWrt, TDROut, ALUMode=1, ALUOp=0110, ZFWrt, type=pre-fetch(10) *
+
+* XOR B, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALUOp=1001, ALUMode=0, CarryInMux=01, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	11000010, 00001010, 00010000, 11000000; * B_Out, B_Wrt, MDR_Y_Out, ALUOp=0110, ALUMode=1, ZF_Wrt, type=pre-fetch(10)*
+
+
+
+*
+1 	ALU_Op2, ALU_Op1, ALU_Op0, WR, RD, branch_code, type1, type0
+2 	PC_Wrt, CarryIn_Mux1, CarryIn_Mux0, CarryOut_Invert, ZF_Wrt, CF_Wrt, ALU_Mode, ALU_Op3
+3 	MAR_Wrt, MDRIn_Mux, MDR_DB_Out, MDR_Y_Out, MDR_X_Out, MDR_Wrt, IR_Wrt, PC_Out
+4	B_Out, B_Wrt, A_Out, A_Wrt, IMM_Out, IMM_Val, TDR_Out, TDR_Wrt
+*
+
+* NOT A *
+>>	 00000010, 00001010, 00000000, 00111000; * AOut, AWrt, IMMOut, IMM(0), ALUMode=1, ALUOp=0000, ZFWrt, type=pre-fetch(10) *
+	
+* NOT B *
+>>	00000010, 00001010, 00000000, 11001000; * BOut, BWrt, IMMOut, IMM(0), ALUMode=1, ALUOp=0000, ZFWrt, type=pre-fetch(10) *
+	
+
+* CLC *
+>>	00100010, 00110101, 00001000, 00001000; * CF_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, CarryOutInvert=1, type=pre-fetch(10) *
+
+* STC *
+>>	01000000, 00000011, 00000100, 00101000, * MDR_Wrt, IMM_Out, (A_Out), MDR_In_Mux=0, IMM_Val=0, ALU_Op=1010, ALU_Mode=1, type=00(seq) *
+	11000010, 00000100, 00001000, 00001100; * CF_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=0110, ALU_Mode=0, Carry_In_Mux=00, type=pre(10) *
+
+* CLZ *
+>>	01000000, 00000011, 00000100, 00101000, * MDR_Wrt, IMM_Out, (A_Out), MDR_In_Mux=0, IMM_Val=0, ALU_Op=1010, ALU_Mode=1, type=00(seq) *
+	00100010, 00101001, 00001000, 00001100; * ZF_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, type=pre(10) *
+
+* STZ *
+>>	01000000, 00000011, 00000100, 00101000, * MDR_Wrt, IMM_Out, (A_Out), MDR_In_Mux=0, IMM_Val=0, ALU_Op=1010, ALU_Mode=1, type=00(seq) *
+	00100010, 00101001, 00001000, 00001000; * ZF_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, type=pre(10) *
+
+* JMP AD8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 10100001, 00001000, 00001000; * MDR_X_Out, PC_Wrt, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+
+* JMP [AD8] - Jumps to address located at AD8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALUOp=1001, ALUMode=0, CarryInMux=01, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1(DB), MDR_Wrt, next=00 * 
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU_Op=1001, ALUMode=0, CarryInMux=01, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1(DB), MDR_Wrt, next=00 * 
+	00100010, 10100001, 00001000, 00001000; * MDR_X_Out, PC_Wrt, IMM_Out, IMM_Val=0, ALU_Op = 1001, ALU_Mode = 0, Carry_In_Mux=01, Next=pre-fetch(10)*	
+
+* JMP B - Jumps to B *
+>>	00100010, 10100001, 00000000, 10001000; * B_Out, PC_Wrt, IMM_Out, IMM_Val=0, ALU_Op = 1001, ALU_Mode = 0, Carry_In_Mux=01, Next=pre-fetch(10) *	
+
+* JMP A - Jumps to A *
+>>	00100010, 10100001, 00000000, 00101000; * A_Out, PC_Wrt, IMM_Out, IMM_Val=0, ALU_Op = 1001, ALU_Mode = 0, Carry_In_Mux=01, Next=pre-fetch(10) *	
+
+* JZ AD8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000001, 00000000, 00000000, 00000000, * branch point. if ZF = 1 then execute next u. else jump to fetch. branch_code=0(ZF), type=branch(01)*
+	00100010, 10100001, 00001000, 00001000; * MDR_X_Out, PC_Wrt, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+
+* JZ B *
+>>	00000001, 00000000, 00000000, 00000000, * branch point. if ZF = 1 then execute next u. else jump to fetch. branch_code=0(ZF), type=branch(01)*
+	00100010, 10100001, 00000000, 10001000; * B_Out, PC_Wrt, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+
+* JC AD8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000101, 00000000, 00000000, 00000000, * branch point. if CF = 1 then execute next u. else jump to fetch. branch_code=1(CF), type=branch(01) *
+	00100010, 10100001, 00001000, 00001000; * MDR_X_Out, PC_Wrt, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch)*
+
+* JC B *
+>>	00000101, 00000000, 00000000, 00000000, * branch point. if CF = 1 then execute next u. else jump to fetch. branch_code=1(CF), type=branch(01) *
+	00100010, 10100001, 00000000, 10001000; * B_Out, PC_Wrt, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch)*
+
+* CMP A, B *
+>>	00100000, 00100001, 00000000, 10001001, * BOut, TDRWrt, IMMOut, IMM(0), ALUMode=0, ALUOp=1001, CarryInMux1=0, CarryInMux0=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between A and B on X bus. * 
+	11000010, 00001100, 00000000, 00100010; * AOut, TDROut, ALUMode=0, ALUOp=0110, CarryInMux=00, CarryOutInvert=0, ZFWrt, CFWrt, type=pre-fetch(10) *
+
+* CMP A, IMM8 *
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and A on X bus. * 
+	11000010, 00001100, 00010000, 00100000; * A_Out, MDR_Y_Out, ALUOp=0110, ALUMode=0, CarryInMux=00, CarryOutInvert=0, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+* CMP B, IMM8*
+>>	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 00000000, 00000000, * RD, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100000, 10100001, 00000001, 00001100, * PC+1: PC_Out, PC_Wrt, ALU=ADD,ALUMode=L, CarryInMux1=0, CarryInMux0=1, IMM_Out, IMMVal=1, next=00 *
+	00000000, 00000000, 00000000, 00000000, * Delay to avoid bus collision between PC and B on X bus. * 
+	11000010, 00001100, 00010000, 10000000; * B_Out, MDR_Y_Out, ALUOp=0110, ALUMode=0, CarryInMux=00, CarryOutInvert=0, ZF_Wrt, CF_Wrt, type=pre-fetch(10)*
+
+*
+1 	ALU_Op2, ALU_Op1, ALU_Op0, WR, RD, branch_code, type1, type0
+2 	PC_Wrt, CarryIn_Mux1, CarryIn_Mux0, CarryOut_Invert, ZF_Wrt, CF_Wrt, ALU_Mode, ALU_Op3
+3 	MAR_Wrt, MDRIn_Mux, MDR_DB_Out, MDR_Y_Out, MDR_X_Out, MDR_Wrt, IR_Wrt, PC_Out
+4	B_Out, B_Wrt, A_Out, A_Wrt, IMM_Out, IMM_Val, TDR_Out, TDR_Wrt
+*
+
+* CALL AD8 : [SP] <- PC : pushes PC, jumps to AD8 *
+>>	 * push PC *
+	* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &SP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* SP to MDR *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+	* SP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	
+	00000000, 00000000, 00000000, 00000000, 
+	* push PC + 1 *
+	00100000, 00100001, 00000101, 00001100, * MDR_Wrt, PC_Out, MDR_In_Mux=0(Z), IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+		
+	* dec SP *
+	* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &SP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* SP to MDR *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+	* dec SP (MDR) and write to &SP *
+	11000000, 00000000, 00001100, 00001100, * MDR_X_Out, MDR_Wrt, MDR_In_Mux=0, IMM_Out, IMM_Val=1, ALU_Op=0110, ALU_Mode=0, Carry_In_Mux=00, Next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+	* jump to AD8 *
+	00100000, 00100001, 10000001, 00001000, * PC_Out, MAR_Wrt, IMM_Out, IMM(0), CarryInMux1=0, CarryInMux0=1, ALUOp=1001, ALUMode=0, Next=00 *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1, MDR_Wrt, next=00 *
+	00100010, 10100001, 00001000, 00001000; * MDR_X_Out, PC_Wrt, IMM_Out, IMM(0), ALUOp=1001, ALUMode=0, CarryInMux1=0, CarryInMux0=1, type=10(pre_fetch) *
+	
+
+* RET - inc SP, pop PC *
+>>	* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+
+	* here, MAR receives &SP; reading SP into MDR *
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* inc SP for pop *
+	00100000, 00100001, 00001100, 00001100, * MDR_X_Out, MDR_Wrt, MDR_In_Mux=0, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* write SP to &SP *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=seq(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+	* SP to MAR and read *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1(DB), MDR_Wrt, next=00 * 
+	* [SP] to PC *
+	00100010, 10100001, 00001000, 00001000; * MDR_X_Out, PC_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=pre-fetch(10) *
+
+
+* PUSH A - &SP is located at 0x02 *
+>>	* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &SP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* SP to MDR *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+	* SP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) * 
+	00000000, 00000000, 00000000, 00000000, 
+	* finally, B to [SP] *
+	00100000, 00100001, 00000100, 00101000, * MDR_Wrt, A_Out, MDR_In_Mux=0(Z), IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+	* now to dec SP and rewrite it to &SP *
+		* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+
+		* here, MAR receives &SP; reading SP into MDR *
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *	
+		* subtract one from SP (MDR) and write to &SP (MAR) *
+	11000000, 00000000, 00001100, 00001100, * MDR_X_Out, MDR_Wrt, MDR_In_Mux=0, IMM_Out, IMM_Val=1, ALU_Op=0110, ALU_Mode=0, Carry_In_Mux=00, Next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+* PUSH B - &SP is located at 0x02 *
+>>	* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* &SP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	* SP to MDR *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *
+	* SP to MAR *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) * 
+	00000000, 00000000, 00000000, 00000000, 
+	* finally, B to [SP] *
+	00100000, 00100001, 00000100, 10001000, * MDR_Wrt, B_Out, MDR_In_Mux=0(Z), IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+	* now to dec SP and rewrite it to &SP *
+		* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+
+		* here, MAR receives &SP; reading SP into MDR *
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 *	
+		* subtract one from SP (MDR) and write to &SP (MAR) *
+	11000000, 00000000, 00001100, 00001100, * MDR_X_Out, MDR_Wrt, MDR_In_Mux=0, IMM_Out, IMM_Val=1, ALU_Op=0110, ALU_Mode=0, Carry_In_Mux=00, Next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000010, 00000000, 00100000, 00000000; * MDR_DB_Out, type=00(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+
+
+* POP A - &SP is located at 0x02 *
+
+>>	* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000,
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+
+	* here, MAR receives &SP; reading SP into MDR *
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* inc SP for pop *
+	00100000, 00100001, 00001100, 00001100, * MDR_X_Out, MDR_Wrt, MDR_In_Mux=0, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) * * open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=seq(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1(DB), MDR_Wrt, next=00 * 
+	00100010, 00100001, 00001000, 00011000; * MDR_X_Out, A_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=pre-fetch(10) *	
+
+* POP B - &SP is located at 0x02 *
+>>	* loading 0x02 into MAR and reading &SP into MDR *
+	01000000, 00000011, 00000100, 00101100, * MDR_Wrt, MDR_In_Mux=0(Z), (A_Out), IMM_Out, IMM_Val=1, ALU_Op=1010, ALU_Mode=1, next=seq(00) *
+	00000000, 00000000, 00000000, 00000000, 
+	00100000, 00100001, 10001000, 00001100, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 * 
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+
+	* here, MAR receives &SP; reading SP into MDR *
+	00100000, 00100001, 10001000, 00001000, * MAR_Wrt, MDR_X_Out, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, CarryInMux=01, next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * MDR_Wrt, RD, MDRIn_Mux=1(DB), next=00 * 
+	* inc SP for pop *
+	00100000, 00100001, 00001100, 00001100, * MDR_X_Out, MDR_Wrt, MDR_In_Mux=0, IMM_Out, IMM_Val=1, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=00(+1) ** open MDR to DB one cycle before WR goes low *
+	00010000, 00000000, 00100000, 00000000, * WR, MDR_DB_Out, type=00(+1) * * WR goes low; MDR_DB still open *
+	00000000, 00000000, 00100000, 00000000, * MDR_DB_Out, type=seq(00) * * WR goes inactive, but MDR_DB still needs to be open for data to stay stable. *
+	00100000, 00100001, 10001000, 00001000, * MDR_X_Out, MAR_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=seq(00) *
+	00001000, 00000000, 00000000, 00000000, * RD, next=00 *
+	00001000, 00000000, 01000100, 00000000, * RD, MDRIn_Mux=1(DB), MDR_Wrt, next=00 * 
+	00100010, 00100001, 00001000, 01001000; * MDR_X_Out, B_Wrt, IMM_Out, IMM_Val=0, ALU_Op=1001, ALU_Mode=0, Carry_In_Mux=01, Next=pre-fetch(10) *	
+
+*
+1 	ALU_Op2, ALU_Op1, ALU_Op0, WR, RD, branch_code, type1, type0
+2 	PC_Wrt, CarryIn_Mux1, CarryIn_Mux0, CarryOut_Invert, ZF_Wrt, CF_Wrt, ALU_Mode, ALU_Op3
+3 	MAR_Wrt, MDRIn_Mux, MDR_DB_Out, MDR_Y_Out, MDR_X_Out, MDR_Wrt, IR_Wrt, PC_Out
+4	B_Out, B_Wrt, A_Out, A_Wrt, IMM_Out, IMM_Val, TDR_Out, TDR_Wrt
+*
+	
+
+* NOP *
+>>	00000010, 00000000, 00000000, 00000000; * NOP: Total of 5 clock cycles including the previous Fetch. *
+
